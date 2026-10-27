@@ -15,6 +15,9 @@ const { Accounts } = require('./lib/accounts.cjs');
 const assets = require('./lib/assets.cjs');
 const { Lan } = require('./lib/lan.cjs');
 
+// Sound may start without a first click (the launcher's music). The pages also resume the AudioContext on the first
+// click / key, so the game does not depend on this switch alone.
+app.commandLine.appendSwitch('autoplay-policy', 'no-user-gesture-required');
 protocol.registerSchemesAsPrivileged([{ scheme: 'mtw', privileges: { standard: true, secure: true, supportFetchAPI: true, corsEnabled: true, stream: true, codeCache: true } }]);
 
 const DEV = !app.isPackaged;
@@ -120,12 +123,12 @@ function ipc() {
   ipcMain.handle('accounts:password', (e, a, b) => (fromAccount(e) ? accounts.changePassword(a, b) : { ok: false, code: 'DENIED' }));
   ipcMain.handle('identity:sign', (e, text) => (fromAccount(e) ? accounts.sign(text) : null));
   ipcMain.handle('identity:verify', (_e, pub, text, sig) => Accounts.verify(pub, text, sig));
-  ipcMain.handle('assets:info', () => { const m = assets.scan(assetsFolder()); return { folder: assetsFolder(), files: m.size }; });
+  ipcMain.handle('assets:info', () => { const m = assets.scan(assetsFolder()); return { folder: assetsFolder(), files: m.size, kinds: assets.summary(m), names: [...m.keys()].sort() }; });
   ipcMain.handle('assets:choose', async (e) => {
     const r = await dialog.showOpenDialog(BrowserWindow.fromWebContents(e.sender), { title: 'Cartella dei tuoi file di Miitomo', properties: ['openDirectory'] });
     if (r.canceled || !r.filePaths[0]) return null;
     config.assets = r.filePaths[0]; saveConfig();
-    return { folder: config.assets, files: assets.scan(config.assets).size };
+    { const m = assets.scan(config.assets); return { folder: config.assets, files: m.size, kinds: assets.summary(m), names: [...m.keys()].sort() }; }
   });
   ipcMain.handle('game:open', (e, mode) => { if (e.sender === gameWin?.webContents && ['launcher', 'classic', 'reboot'].includes(mode)) goto(mode); return true; });
   ipcMain.handle('app:info', () => ({ version: app.getVersion(), platform: process.platform, dev: DEV }));

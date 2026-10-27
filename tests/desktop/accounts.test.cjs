@@ -27,9 +27,14 @@ const c = new Accounts(dir);
 ok('corrupt file: starts empty, the old file is kept aside', c.list().accounts.length === 0 && fs.readdirSync(dir).some((n) => n.startsWith('accounts.json.corrupt-')));
 // user's files
 const ad = fs.mkdtempSync(path.join(os.tmpdir(), 'mtw-assets-'));
-for (const n of ['Miitomo_2.4.0.apk', 'asset_env_room.zip', 'random.zip', 'notes.txt']) fs.writeFileSync(path.join(ad, n), 'x');
+for (const n of ['Miitomo_2.4.0.apk', 'asset_env_room.zip', 'sound_BGM_main_mp3.zip', 'asset_model_character_bodyTops0001.zip', 'notes.txt']) fs.writeFileSync(path.join(ad, n), 'x');
 fs.mkdirSync(path.join(ad, 'local-assets', 'cdn'), { recursive: true }); fs.writeFileSync(path.join(ad, 'local-assets', 'cdn', 'cdn1.zip'), 'x');
+fs.mkdirSync(path.join(ad, 'altri', 'cdn2'), { recursive: true }); fs.writeFileSync(path.join(ad, 'altri', 'cdn2', 'sound.zip'), 'x'); fs.writeFileSync(path.join(ad, 'altri', 'cdn2', 'asset_env_room.zip'), 'other copy');
+fs.mkdirSync(path.join(ad, 'node_modules', 'x'), { recursive: true }); fs.writeFileSync(path.join(ad, 'node_modules', 'x', 'pkg.zip'), 'x');
 const m = assets.scan(ad);
-ok('assets: only the patterns of serve-local.ps1 (+ local-assets/cdn/*.zip)', [...m.keys()].sort().join() === 'Miitomo_2.4.0.apk,asset_env_room.zip,cdn1.zip', [...m.keys()]);
+ok('assets (hotfix): every .apk/.zip of the folder and its sub-folders — sound and body zips in the folder itself too', [...m.keys()].sort().join() === 'Miitomo_2.4.0.apk,asset_env_room.zip,asset_model_character_bodyTops0001.zip,cdn1.zip,sound.zip,sound_BGM_main_mp3.zip', [...m.keys()]);
+ok('assets: the copy nearest the folder wins; node_modules skipped; not-game files (notes.txt) left out', m.get('asset_env_room.zip') === path.join(ad, 'asset_env_room.zip') && !m.has('pkg.zip'));
+const k = assets.summary(m);
+ok('assets: summary by kind (for the diagnostics)', k.apk === 1 && k.sound === 2 && k.body === 1 && k.env === 1, k);
 ok('assets: paths cannot escape the served folder', assets.inside(ad, '../etc/passwd') === null && assets.inside(ad, 'a/../../x') === null && !!assets.inside(ad, 'notes.txt'));
 if (fails) { console.log(`${fails} FAILED`); process.exit(1); } else { console.log('ALL PASS'); }
