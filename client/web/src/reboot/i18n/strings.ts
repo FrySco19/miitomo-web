@@ -56,7 +56,7 @@ const en: Record<string, string> = {
   'game.simNote': 'The other players are your local Miis (simulated on this device).',
   'game.react.miss': 'Oh no, I got it wrong!', 'game.react.win': 'Yay, I won!',
   'reward.quiz-star': 'Quiz star',
-  'quiz.q.birthday': 'Whose birthday is on {month}/{day}?', 'quiz.q.greeting': 'Who says "{text}" when coming in?',
+  'quiz.q.birthday': 'Whose birthday is on {date}?', 'quiz.q.greeting': 'Who says "{text}" when coming in?',
   'quiz.q.personality': 'Whose personality is {type}?', 'quiz.q.first': 'Whose birthday comes first in the year?',
 
   // MiiPhone
@@ -95,6 +95,20 @@ const en: Record<string, string> = {
   'cm.3.photo.0': 'What a great photo!! I want to be in the next one!', 'cm.3.photo.1': '{name}, you look amazing here!! Love it!', 'cm.3.photo.2': 'Haha, saving this one right now! Gorgeous!!',
   'cm.3.activity.0': 'Wow!! Tell me everything, {name}!', 'cm.3.activity.1': 'So jealous!! Call me next time!!', 'cm.3.activity.2': 'Amazing!! So nice to see you like this!',
   'cm.3.answer.0': 'Haha, you made me laugh so much!', 'cm.3.answer.1': 'Best answer ever, {name}!!', 'cm.3.answer.2': 'Really?! I did not expect that!',
+
+  // R6 — Settings
+  'app.settings': 'Settings',
+  'set.general': 'General', 'set.name': 'Your Mii\'s name', 'set.save': 'Save', 'set.nameSaved': 'Name saved.', 'set.nameEmpty': 'Write a name (up to 10 letters).',
+  'set.language': 'Language', 'set.region': 'Region', 'set.region.auto': 'Automatic (from the browser)', 'set.regionNote': 'Dates are written like this: 3 January → {date}.',
+  'set.audio': 'Sound', 'set.vol.music': 'Music', 'set.vol.effects': 'Effects', 'set.vol.voice': 'Mii voices',
+  'set.display': 'Display', 'set.quality': '3D quality', 'set.q.auto': 'Auto', 'set.q.high': 'High', 'set.q.balanced': 'Balanced', 'set.q.low': 'Low',
+  'set.motion': 'Animations', 'set.m.system': 'As the device', 'set.m.full': 'All', 'set.m.reduced': 'Reduced',
+  'set.light': 'Light mode', 'set.lightNote': 'For modest devices: lower 3D quality, fewer animations, a calmer world.',
+  'set.play': 'Play', 'set.confirm': 'Ask before acting', 'set.confirmNote': 'Before leaving a place and before deleting a post.',
+  'set.notifications': 'Notifications', 'set.notificationsNote': 'Number on the MiiPhone and who comes and goes in places.',
+  'set.reset': 'Back to defaults', 'set.resetDone': 'Settings back to their defaults.', 'set.storedNote': 'Settings are kept on this device.',
+  'feed.delete': 'Delete', 'feed.deleteAsk': 'Delete this post?', 'feed.deleteYes': 'Yes, delete', 'feed.deleteNo': 'Keep it', 'feed.deleted': 'Post deleted.',
+  'pb.leaveAsk': 'Tap again to leave',
 };
 
 const it: Record<string, string> = {
@@ -147,7 +161,7 @@ const it: Record<string, string> = {
   'game.simNote': 'Gli altri giocatori sono i tuoi Mii locali (simulati su questo dispositivo).',
   'game.react.miss': 'Uffa, ho sbagliato!', 'game.react.win': 'Evviva, ho vinto!',
   'reward.quiz-star': 'Stella del Quiz',
-  'quiz.q.birthday': 'Chi compie gli anni il {day}/{month}?', 'quiz.q.greeting': 'Chi saluta così quando entra: «{text}»?',
+  'quiz.q.birthday': 'Chi compie gli anni il {date}?', 'quiz.q.greeting': 'Chi saluta così quando entra: «{text}»?',
   'quiz.q.personality': 'Chi ha un carattere {type}?', 'quiz.q.first': 'Chi compie gli anni prima nell\'anno?',
 
   'phone.name': 'MiiPhone', 'phone.open': 'Apri il MiiPhone', 'phone.close': 'Chiudi il MiiPhone', 'phone.back': 'Indietro', 'phone.hello': 'I tuoi Mii, sempre con te.',
@@ -183,6 +197,20 @@ const it: Record<string, string> = {
   'cm.3.photo.0': 'Ma che bella foto!! La prossima volta voglio esserci anch\'io!', 'cm.3.photo.1': '{name}, sei fantastico in questa foto!! Adoro!', 'cm.3.photo.2': 'Ahah, questa la salvo subito! Bellissima!!',
   'cm.3.activity.0': 'Wow!! Raccontami tutto, {name}!', 'cm.3.activity.1': 'Che invidia!! La prossima volta chiamatemi!!', 'cm.3.activity.2': 'Fantastico!! Che bello vedervi così!',
   'cm.3.answer.0': 'Ahah, mi hai fatto ridere troppo!', 'cm.3.answer.1': 'Questa risposta è il massimo, {name}!!', 'cm.3.answer.2': 'Ma davvero?! Non me l\'aspettavo!',
+
+  'app.settings': 'Impostazioni',
+  'set.general': 'Generali', 'set.name': 'Nome del tuo Mii', 'set.save': 'Salva', 'set.nameSaved': 'Nome salvato.', 'set.nameEmpty': 'Scrivi un nome (massimo 10 lettere).',
+  'set.language': 'Lingua', 'set.region': 'Regione', 'set.region.auto': 'Automatica (dal browser)', 'set.regionNote': 'Le date si scrivono così: 3 gennaio → {date}.',
+  'set.audio': 'Suono', 'set.vol.music': 'Musica', 'set.vol.effects': 'Effetti', 'set.vol.voice': 'Voci dei Mii',
+  'set.display': 'Schermo', 'set.quality': 'Qualità 3D', 'set.q.auto': 'Auto', 'set.q.high': 'Alta', 'set.q.balanced': 'Media', 'set.q.low': 'Bassa',
+  'set.motion': 'Animazioni', 'set.m.system': 'Come il dispositivo', 'set.m.full': 'Tutte', 'set.m.reduced': 'Ridotte',
+  'set.light': 'Modalità leggera', 'set.lightNote': 'Per dispositivi modesti: qualità 3D più bassa, meno animazioni, un mondo più tranquillo.',
+  'set.play': 'Gioco', 'set.confirm': 'Chiedi conferma', 'set.confirmNote': 'Prima di lasciare un luogo e prima di eliminare un post.',
+  'set.notifications': 'Notifiche', 'set.notificationsNote': 'Numero sul MiiPhone e chi entra ed esce nei luoghi.',
+  'set.reset': 'Ripristina', 'set.resetDone': 'Impostazioni riportate a quelle iniziali.', 'set.storedNote': 'Le impostazioni restano su questo dispositivo.',
+  'feed.delete': 'Elimina', 'feed.deleteAsk': 'Eliminare questo post?', 'feed.deleteYes': 'Sì, elimina', 'feed.deleteNo': 'Tienilo', 'feed.deleted': 'Post eliminato.',
+  'pb.leaveAsk': 'Tocca di nuovo per uscire',
 };
 
-export const STRINGS: Record<'en' | 'it', Record<string, string>> = { en, it };
+/** Registry of language tables: adding a language = adding its table here (missing keys fall back to English). */
+export const STRINGS: Record<string, Record<string, string>> = { en, it };

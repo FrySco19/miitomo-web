@@ -35,7 +35,7 @@ const ctxOf = (n: number): GameContext => ({ me: { id: 'host', name: 'Kelly', pe
   let wrongFact = 0;
   for (const q of qs) {
     const right = people.find((p) => p.id === q.ids[q.correct])!;
-    if (q.prompt.key === 'quiz.q.birthday' && !(right.birthday && right.birthday.day === q.prompt.vars!.day && right.birthday.month === q.prompt.vars!.month)) wrongFact++;
+    if (q.prompt.key === 'quiz.q.birthday' && !(right.birthday && q.prompt.vars!.date === `#date:${right.birthday.month}-${right.birthday.day}`)) wrongFact++;
     if (q.prompt.key === 'quiz.q.greeting' && !String(right.greeting).startsWith(String(q.prompt.vars!.text))) wrongFact++;
     if (q.options.length < 2 || q.options.length > 4 || new Set(q.ids).size !== q.ids.length) wrongFact++;
     if (q.ids.some((id) => !people.some((p) => p.id === id))) wrongFact++;

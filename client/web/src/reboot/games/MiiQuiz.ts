@@ -43,7 +43,7 @@ export function questionBank(ctx: GameContext, rnd: () => number): Question[] {
   for (const p of ps) {
     if (p.birthday) {
       const others = ps.filter((o) => o !== p && (!o.birthday || key(o.birthday) !== key(p.birthday!)));
-      ask({ key: 'quiz.q.birthday', vars: { day: p.birthday.day, month: p.birthday.month } }, p, others);
+      ask({ key: 'quiz.q.birthday', vars: { date: `#date:${p.birthday.month}-${p.birthday.day}` } }, p, others);
     }
     if (p.greeting) {
       const others = ps.filter((o) => o !== p && o.greeting.toLowerCase() !== p.greeting.toLowerCase());
