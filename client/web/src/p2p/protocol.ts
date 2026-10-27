@@ -15,6 +15,8 @@
  *   unfriend {}                          no longer friends
  *   profile  { profile }                 my profile changed / I am back online
  *   app      { ch, data }                game data for one feature (e.g. 'feed' for MIInstagram)
+ *   pres     { status, room }            my presence (online / busy / in-room, the room I am in) — direct link
+ *   mp       { m }                       shared-room multiplayer (session.ts checks the contents)
  *   part     { id, i, n, d }             a piece of a large message
  */
 export const MAX_MESSAGE = 2_000_000;      // a whole message (a photo post is ~100 KB)
@@ -28,6 +30,8 @@ export type Wire =
   | { t: 'freq' | 'facc' | 'profile'; profile: unknown }
   | { t: 'fdec' | 'unfriend' }
   | { t: 'app'; ch: string; data: unknown }
+  | { t: 'pres'; status: 'online' | 'busy' | 'in-room'; room: { host: string | null; joinable: boolean } | null }
+  | { t: 'mp'; m: unknown }
   | { t: 'part'; id: string; i: number; n: number; d: string };
 
 /** Shape check of a decoded message (contents of profile / data are checked by their owners). */
@@ -43,6 +47,12 @@ export function parseWire(raw: unknown): Wire | null {
     }
     case 'freq': case 'facc': case 'profile': return m.profile && typeof m.profile === 'object' ? { t: m.t, profile: m.profile } : null;
     case 'fdec': case 'unfriend': return { t: m.t };
+    case 'pres': {
+      if (m.status !== 'online' && m.status !== 'busy' && m.status !== 'in-room') return null;
+      const r = m.room as { host?: unknown; joinable?: unknown } | null;
+      return { t: 'pres', status: m.status, room: r && typeof r === 'object' ? { host: typeof r.host === 'string' && PEER_ID.test(r.host) ? r.host : null, joinable: !!r.joinable } : null };
+    }
+    case 'mp': return m.m && typeof m.m === 'object' ? { t: 'mp', m: m.m } : null;
     case 'app': return typeof m.ch === 'string' && /^[a-z0-9.-]{1,24}$/.test(m.ch) ? { t: 'app', ch: m.ch, data: m.data } : null;
     case 'part': return typeof m.id === 'string' && m.id.length <= 24 && Number.isInteger(m.i) && Number.isInteger(m.n) && (m.n as number) > 0 && (m.n as number) <= Math.ceil(MAX_MESSAGE / PART) && (m.i as number) >= 0 && (m.i as number) < (m.n as number) && typeof m.d === 'string' ? { t: 'part', id: m.id, i: m.i as number, n: m.n as number, d: m.d } : null;
     default: return null;

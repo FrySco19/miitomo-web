@@ -17,6 +17,8 @@ export type PeerState = 'new' | 'connecting' | 'handshake' | 'ready' | 'closed';
 export type CloseReason = 'BYE' | 'TIMEOUT' | 'BAD_HANDSHAKE' | 'MISMATCH' | 'NETWORK' | 'PROTOCOL' | 'REPLACED' | 'LIMIT';
 export interface PeerOpts {
   iceServers: RTCIceServer[];
+  /** 'relay' = TURN only (diagnostics / tests of the TURN path). */
+  policy?: RTCIceTransportPolicy;
   /** When known (a friend, an invite): the peer must turn out to be exactly this identity. */
   expectId?: string; expectPub?: string;
   onReady(p: Peer): void;
@@ -48,7 +50,7 @@ export class Peer {
   private tr(m: string) { this.trace.push(`${(performance.now() / 1000).toFixed(2)} ${m}`); if (this.trace.length > 20) this.trace.shift(); }
 
   constructor(private me: Identity, private o: PeerOpts) {
-    this.pc = new RTCPeerConnection({ iceServers: o.iceServers });
+    this.pc = new RTCPeerConnection({ iceServers: o.iceServers, iceTransportPolicy: o.policy ?? 'all' });
     this.pc.addEventListener('connectionstatechange', () => { const s = this.pc.connectionState; if (s === 'failed' || s === 'closed') this.close('NETWORK'); });
     this.pc.addEventListener('datachannel', (e) => this.bind(e.channel));
   }

@@ -78,12 +78,23 @@ function openShell() {
 function openGame() {
   const part = accountPartition();
   gameWin = win({}, `${ORIGIN}/index.html?launcher=1&autoload=1&desktop=1`, part);
-  gameWin.on('closed', () => { gameWin = null; closeP2P(); if (!shellWin && accounts.session) { accounts.logout(); app.quit(); } });
+  gameWin.on('closed', () => { gameWin = null; void closeP2P().then(() => { if (!shellWin && accounts.session) { accounts.logout(); app.quit(); } }); });
   // the P2P engine lives in a hidden page of the same account: it keeps the connections while the game page reloads
   p2pWin = win({ hidden: true, width: 400, height: 300 }, `${ORIGIN}/p2p.html?desktop=1`, part);
   menu();
 }
-function closeP2P() { lan?.stop(); lan = null; if (p2pWin && !p2pWin.isDestroyed()) p2pWin.destroy(); p2pWin = null; }
+/**
+ * Closes the account's P2P engine. It is asked to stop first (0.2): it tells the friends in a shared room that this
+ * player left (no seat kept waiting 30 s, no ghost Mii), then the page goes.
+ */
+async function closeP2P() {
+  const w = p2pWin; p2pWin = null;
+  if (w && !w.isDestroyed()) {
+    try { await Promise.race([w.webContents.executeJavaScript('window.__p2p ? (window.__p2p.stop(), true) : false'), new Promise((r) => setTimeout(r, 600))]); await new Promise((r) => setTimeout(r, 200)); } catch { /* already gone */ }
+    if (!w.isDestroyed()) w.destroy();
+  }
+  lan?.stop(); lan = null;
+}
 function goto(mode) {
   if (!gameWin) return;
   const q = mode === 'launcher' ? 'launcher=1&autoload=1' : `autoload=1&reboot=${mode === 'reboot' ? 1 : 0}`;
@@ -93,7 +104,7 @@ function logout() {
   accounts.logout();
   // the login window opens first: with no window left, the app would quit
   if (!shellWin) openShell();
-  const g = gameWin; gameWin = null; closeP2P(); g?.destroy();
+  const g = gameWin; gameWin = null; void closeP2P(); g?.destroy();
   menu();
 }
 function menu() {
@@ -131,7 +142,9 @@ function ipc() {
     { const m = assets.scan(config.assets); return { folder: config.assets, files: m.size, kinds: assets.summary(m), names: [...m.keys()].sort() }; }
   });
   ipcMain.handle('game:open', (e, mode) => { if (e.sender === gameWin?.webContents && ['launcher', 'classic', 'reboot'].includes(mode)) goto(mode); return true; });
-  ipcMain.handle('app:info', () => ({ version: app.getVersion(), platform: process.platform, dev: DEV }));
+  // signal = the presence / signaling server for friends over the internet (server/signal): the user's setting in the
+  // friends panel wins; this is the app default (config.json "signal", or MTW_SIGNAL). No secret is ever stored here.
+  ipcMain.handle('app:info', () => ({ version: app.getVersion(), platform: process.platform, dev: DEV, signal: process.env.MTW_SIGNAL || config.signal || '' }));
   // LAN (only the account's hidden P2P page drives it)
   ipcMain.handle('lan:start', async (e, me) => {
     if (!fromAccount(e) || e.sender !== p2pWin?.webContents) return false;

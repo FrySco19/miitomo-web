@@ -7,6 +7,7 @@ import { P2PEngine, P2P_CHANNEL, LanApi } from './engine';
 import { loadSave, newSave } from '../play/Save';
 
 interface Desktop {
+  info(): Promise<{ signal?: string }>;
   accounts: { current(): Promise<{ username: string; pub: string; peerId: string; code: string } | null> };
   identity: { sign(t: string): Promise<string | null>; verify(p: string, t: string, s: string): Promise<boolean> };
   lan: LanApi;
@@ -24,10 +25,13 @@ async function main() {
     return { profile: { miiData, name: name || acct.username.slice(0, 10), birthday, height, build, personality, greetings, voice }, outfit: s.outfit, room: s.room };
   };
   const nameNow = async () => (await profile())?.profile.name ?? acct.username;
+  const info = await D.info().catch(() => ({} as { signal?: string }));
   const engine = new P2PEngine({
     me: { id: acct.peerId, pub: acct.pub, code: acct.code, name: String(await nameNow()).slice(0, 16), sign: (t) => D.identity.sign(t), verify: (p, t, s) => D.identity.verify(p, t, s) },
-    lan: D.lan, kv: localStorage, channel: new BroadcastChannel(P2P_CHANNEL), profile,
+    lan: D.lan, kv: localStorage, channel: new BroadcastChannel(P2P_CHANNEL), profile, defaultServer: info.signal ?? '',
   });
+  // closing / logging out: the friends in a shared room are told at once (no seat left waiting)
+  window.addEventListener('beforeunload', () => engine.stop());
   (window as unknown as { __p2p: P2PEngine }).__p2p = engine;
   await engine.start();
 }
