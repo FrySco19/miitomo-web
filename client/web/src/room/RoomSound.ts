@@ -23,6 +23,16 @@ const TABLES = ['Action/anim', 'Action/common', 'Action/effect', 'Action/face', 
 const WAVES = ['Wave/common', 'Wave/emotion', 'Wave/bundle'];
 
 export interface SoundLogEntry { t: number; key: string; event: string | null; file: string | null; played: boolean; why?: string; }
+/** Where the last background music got to (diagnostics: why it plays or why it does not). */
+export interface BgmStatus { key: string; bgmId: string | null; wave: string | null; file: string | null; state: 'playing' | 'loading' | 'no-table' | 'no-entry' | 'missing-file' | 'not-in-storage' | 'decode-failed' | 'not-unlocked' | 'disabled' | 'stopped'; why: string }
+
+/**
+ * HOTFIX 2026-10-28 — ONE AudioContext for the page. Every RoomSound used to create its own and never closed it;
+ * afterAssets() makes a new RoomSound after every import, and Chromium refuses new contexts past a small limit per
+ * page: from then on `new AudioContext()` threw, the error went to the console only, and the game was mute.
+ */
+let shared: AudioContext | null = null;
+export const audioContext = () => shared;
 
 export class RoomSound {
   private tables = new Map<string, Table>();
@@ -51,7 +61,8 @@ export class RoomSound {
   readonly log: SoundLogEntry[] = [];
   readonly missing = new Set<string>();
 
-  constructor() {
+  constructor() { this.loadTables(); }
+  private loadTables() {
     for (const t of TABLES) {
       const b = vfs.get(`${TABLE_DIR}${t}.msbt`); if (!b) continue;
       try {
@@ -60,6 +71,16 @@ export class RoomSound {
         this.tables.set(t, tab);
       } catch (e) { console.warn(`tabella suoni ${t}: ${(e as Error).message}`); }
     }
+  }
+  /**
+   * New files were imported: read the tables again, forget decoded buffers and missing files, restart the current
+   * music with the new chain. The AudioContext and the gains stay (HOTFIX 2026-10-28: the game used to throw the whole
+   * object away on every import, cutting the music that was loading / playing).
+   */
+  reload() {
+    this.tables.clear(); this.loadTables();
+    this.buffers.clear(); this.missing.clear();
+    if (this.bgmKey) this.resumeBgm();
   }
   get tablesLoaded() { return this.tables.size; }
   get filesAvailable() { return [...vfs.keys()].filter((k) => /^sound\/[^/]+\.(wav|mp3)$/.test(k)).length; }
@@ -80,28 +101,67 @@ export class RoomSound {
     return out;
   }
 
-  /** Must be called from a user gesture (autoplay policy). */
+  /** Why the audio could not start (null = fine). */
+  lastError: string | null = null;
+  lastBgm: BgmStatus | null = null;
+  /**
+   * Creates (once per page) / resumes the AudioContext. Call it from a user gesture in a browser (autoplay policy);
+   * the desktop app allows sound without one, and the first click resumes it anyway if the system suspended it.
+   */
   unlock() {
-    if (this.ctx) { if (this.ctx.state === 'suspended') this.ctx.resume().catch(() => {}); return; }
     try {
-      const AC = window.AudioContext ?? (window as any).webkitAudioContext;
-      this.ctx = new AC();
-      this.seGain = this.ctx.createGain(); this.seGain.gain.value = this.effects ? 0.9 * this.levels.effects : 0; this.seGain.connect(this.ctx.destination);   // APPROXIMATED mix
-      this.bgmGain = this.ctx.createGain(); this.bgmGain.gain.value = this.music ? 0.45 * this.levels.music : 0; this.bgmGain.connect(this.ctx.destination);
-      this.resumeBgm();
-    } catch (e) { this.ctx = null; console.warn('WebAudio non disponibile', e); }
+      if (!shared || shared.state === 'closed') { const AC = window.AudioContext ?? (window as any).webkitAudioContext; shared = new AC(); }
+    } catch (e) { this.lastError = `AudioContext non creato: ${(e as Error).message}`; console.warn(this.lastError); return; }
+    const ctx = shared!;
+    if (ctx.state === 'suspended') ctx.resume().then(() => { if (this.lastBgm?.state === 'not-unlocked') this.resumeBgm(); }, (e) => { this.lastError = `AudioContext sospeso: ${(e as Error)?.message ?? e}`; });
+    if (this.ctx === ctx) return;
+    this.ctx = ctx; this.lastError = null;
+    this.seGain = ctx.createGain(); this.seGain.gain.value = this.effects ? 0.9 * this.levels.effects : 0; this.seGain.connect(ctx.destination);   // APPROXIMATED mix
+    this.bgmGain = ctx.createGain(); this.bgmGain.gain.value = this.music ? 0.45 * this.levels.music : 0; this.bgmGain.connect(ctx.destination);
+    this.resumeBgm();
   }
   get unlocked() { return !!this.ctx && this.ctx.state !== 'closed'; }
+  /** Everything the diagnostics need to say why there is (no) sound. */
+  status() {
+    const present = TABLES.filter((t) => this.tables.has(t));
+    return {
+      context: this.ctx ? this.ctx.state : shared ? `${shared.state} (non collegato)` : 'non creato',
+      sampleRate: this.ctx?.sampleRate ?? null, enabled: this.enabled, music: this.music, effects: this.effects, levels: { ...this.levels },
+      gains: { music: this.bgmGain?.gain.value ?? null, effects: this.seGain?.gain.value ?? null },
+      tables: { present, missing: TABLES.filter((t) => !this.tables.has(t)) },
+      files: this.filesAvailable, bgm: this.lastBgm, missing: [...this.missing].slice(-20), lastError: this.lastError,
+      log: this.log.slice(-12).map((e) => ({ key: e.key, event: e.event, file: e.file, played: e.played, why: e.why ?? null })),
+    };
+  }
+  /** First sound event of the effect tables whose file the user imported (for the audio test). */
+  testEvent(): string | null {
+    for (const t of WAVES) for (const [k, v] of this.tables.get(t) ?? []) if (v[0] && vfs.has(`sound/${v[0]}`)) return k;
+    return null;
+  }
+  /** Explains a BGM key without playing it (launcher: title music or the room's). */
+  explain(key: string): BgmStatus {
+    const tab = this.tables.get('Action/bgm');
+    const bgmId = tab?.get(key)?.[0] ?? null;
+    const wave = bgmId ? this.first('BGM/common', bgmId) : null;
+    const file = wave ? this.first('Wave/bgm', wave) : null;
+    const base = { key, bgmId, wave, file };
+    if (!tab) return { ...base, state: 'no-table', why: 'tabella Sound/Action/bgm.msbt non importata (APK)' };
+    if (!bgmId) return { ...base, state: 'no-entry', why: `"${key}" non è in Action/bgm` };
+    if (!wave) return { ...base, state: 'no-entry', why: this.tables.has('BGM/common') ? `${bgmId} non è in BGM/common` : 'tabella BGM/common non importata' };
+    if (!file) return { ...base, state: 'no-entry', why: this.tables.has('Wave/bgm') ? `${wave} non è in Wave/bgm` : 'tabella Wave/bgm non importata' };
+    if (!vfs.has(`sound/${file}`)) return { ...base, state: 'missing-file', why: `sound/${file} non importato (manca lo zip sound_* che lo contiene)` };
+    return { ...base, state: 'loading', why: '' };
+  }
 
   private buffer(file: string): Promise<AudioBuffer | null> {
     // M17: BGM tracks are cold (IndexedDB): load the file first, then decode
     if (!this.buffers.has(file) && vfs.has(`sound/${file}`) && !vfs.ready([`sound/${file}`])) {
-      return vfs.ensure([`sound/${file}`]).then(() => this.buffer(file), () => null);
+      return vfs.ensure([`sound/${file}`]).then(() => (vfs.ready([`sound/${file}`]) ? this.buffer(file) : (this.missing.add(`${file} (non trovato nell'archivio locale)`), null)), (e) => { this.missing.add(`${file} (archivio locale: ${(e as Error)?.message ?? e})`); return null; });
     }
     if (!this.buffers.has(file)) {
       const bytes = vfs.get(`sound/${file}`);
       const p = !bytes || !this.ctx ? Promise.resolve(null)
-        : this.ctx.decodeAudioData(bytes.slice().buffer).then((b) => b, () => { this.missing.add(`${file} (decodifica)`); return null; });
+        : this.ctx.decodeAudioData(bytes.slice().buffer).then((b) => b, (e) => { this.missing.add(`${file} (decodifica: ${(e as Error)?.message ?? e})`); return null; });
       if (!bytes) this.missing.add(file);
       if (bytes && !this.ctx) return p; // not cached: retry once the context exists
       this.buffers.set(file, p);
@@ -147,30 +207,32 @@ export class RoomSound {
     if (this.bgmKey === id && this.bgmNode) return file;
     this.stopBgm();
     this.bgmKey = id;
-    if (!file) { this.record(key, bgmId ?? null, null, 'catena BGM incompleta'); return null; }
-    if (!vfs.has(`sound/${file}`)) { this.missing.add(file); this.record(key, bgmId, file, 'file non importato'); return file; }
+    const st = (state: BgmStatus['state'], why = '') => { this.lastBgm = { key, bgmId: bgmId ?? null, wave, file, state, why }; };
+    if (!file) { const ex = this.explain(key); st(ex.state, ex.why); this.record(key, bgmId ?? null, null, `catena BGM incompleta: ${ex.why}`); return null; }
+    if (!vfs.has(`sound/${file}`)) { this.missing.add(file); st('missing-file', `sound/${file} non importato`); this.record(key, bgmId, file, 'file non importato'); return file; }
     this.record(key, bgmId, file);
-    if (!this.ctx || !this.enabled) return file;
+    if (!this.enabled) { st('disabled', 'audio spento (impostazioni)'); return file; }
+    if (!this.ctx) { st('not-unlocked', 'audio non ancora attivato: serve un clic (regole di riproduzione automatica)'); return file; }
     const ctx = this.ctx;
+    st('loading', 'decodifica');
     this.buffer(file).then((b) => {
-      if (!b || this.bgmKey !== id || !this.enabled || this.bgmNode) return;
+      if (this.bgmKey !== id) return;
+      if (!b) { st(this.missing.has(`${file} (non trovato nell'archivio locale)`) ? 'not-in-storage' : 'decode-failed', [...this.missing].filter((m) => m.startsWith(file)).join('; ') || 'buffer non disponibile'); return; }
+      if (!this.enabled || this.bgmNode) return;
       const s = ctx.createBufferSource(); s.buffer = b; s.loop = true; s.connect(this.bgmGain!); s.start(); this.bgmNode = s;
+      st('playing', ctx.state === 'running' ? '' : `contesto audio ${ctx.state}`);
     });
     return file;
   }
   /** Launcher: whether a BGM key resolves to a music file that the user imported (nothing is played). */
-  canPlay(key: string) {
-    const id = this.tables.get('Action/bgm')?.get(key)?.[0];
-    const wave = id ? this.first('BGM/common', id) : null;
-    const file = wave ? this.first('Wave/bgm', wave) : null;
-    return !!file && vfs.has(`sound/${file}`);
-  }
-  stopBgm() { try { this.bgmNode?.stop(); } catch { /* */ } this.bgmNode?.disconnect(); this.bgmNode = null; }
+  canPlay(key: string) { return this.explain(key).state === 'loading'; }
+  stopBgm() { try { this.bgmNode?.stop(); } catch { /* */ } this.bgmNode?.disconnect(); this.bgmNode = null; if (this.lastBgm?.state === 'playing') this.lastBgm = { ...this.lastBgm, state: 'stopped', why: '' }; }
   setEnabled(on: boolean) {
     this.enabled = on;
     if (!on) this.stopBgm();
     else this.resumeBgm();
   }
   private resumeBgm() { if (!this.bgmKey) return; const [k, alt] = this.bgmKey.split('/'); this.bgmKey = ''; this.stopBgm(); this.bgm(k, alt); }
-  dispose() { this.stopBgm(); }
+  /** The page's AudioContext stays (shared): only this object's nodes are let go. */
+  dispose() { this.stopBgm(); try { this.bgmGain?.disconnect(); this.seGain?.disconnect(); } catch { /* */ } this.bgmGain = this.seGain = null; this.ctx = null; }
 }

@@ -8,6 +8,7 @@ import { importZipBytes, saveVfs, loadVfs, clearVfs, openModelPackage, text as v
 import { refreshOriginal, bodyPackage, referenceImageUrl, state as orig, BODY_ID, OriginalStatus } from './assets/original';
 import { BodyModel } from './body/BodyModel';
 import { computeBodyScale, BodyScale } from './body/BodyScale';
+import { attachHead, measureMii, HeadAttach } from './body/HeadAttach';
 import { accessoryTransform, CATEGORIES, CAT_DIR, CAT_LABEL, Category, Outfit, catalog, itemPackage, resolveOutfit, materialVisible, variantXml, variantStems, clearWardrobeCache, Resolution } from './body/Wardrobe';
 import { hasLutShaderSource, setLights, getLights } from './agx/LutMaterial';
 import { parseSceneXml } from './agx/xml';
@@ -19,14 +20,14 @@ import { withP2P } from './p2p/social';
 import type { DesktopApi as LauncherDesktop } from './launcher/Launcher';
 import type { RebootHost } from './reboot/host';
 import { RoomDirector, DirectorEvent, Interactable, MiiState } from './room/RoomDirector';
-import { RoomSound } from './room/RoomSound';
+import { RoomSound, audioContext, BgmStatus } from './room/RoomSound';
 import { RoomUI, MenuItem } from './room/RoomUI';
 import { expressionsAvailable, resetExpressions, neededFaces, emotionFace, pickGesture, rulesInText, dominantGenre, FaceTriple, Personality, PERSONALITIES, ruleInfo, gestureInfo } from './room/Expression';
 import { sanitizeFriend } from './social/Social';
 import { personalityType } from './play/Personality';
 import { Effects } from './effects/Effects';
 import { buildShop, meshBoxes, shopAvailable, ShopBuild } from './room/Shop';
-import { PROVIDERS, resolveVoice, speakable, DEFAULT_VOICE, VoicePref, VoiceParams, VoiceProvider, setWebTtsPrefs } from './voice/Voice';
+import { PROVIDERS, resolveVoice, speakable, DEFAULT_VOICE, VoicePref, VoiceParams, VoiceProvider, setWebTtsPrefs, voiceReport, onVoicesChanged } from './voice/Voice';
 import { line, label, textsAvailable, clearTextCache } from './room/RoomText';
 import { layoutAvailable, clearSpriteCache } from './room/LayoutSprites';
 import { Play, PlayApi, GuestSpec } from './play/Play';
@@ -156,23 +157,14 @@ function buildSlot(s: Slot): { ms: number } {
       addPart(m);
     }
   }
-  const skel = s.parts.find((p) => p.jointFrame('Head') && !p.group.userData.headwear) ?? null;
-  s.body = skel;
-  if (skel) {
-    skel.headAnchor.add(r.group);
-    for (const p of s.parts) if (p.group.userData.headwear) {
-      // headwear PODs are authored in head units / 10 (bounds: 6.6 wide, top at 7.3 vs FFL hair ~50) -> x10 under the
-      // anchor that already carries AFL's S(0.1). INFERRED from the data, see MII.md § M6.
-      p.applyPose(null, 0); p.group.scale.setScalar(10); skel.headAnchor.add(p.group);
-    }
-    s.root.scale.setScalar(ui.scene === 'room' ? 1 : 10); // room: Mii and room share body units (POD Units 0.01)
-  } else {
-    s.root.add(r.group);
-    for (const p of s.parts) if (p.group.userData.headwear) s.root.add(p.group);
-    s.root.scale.setScalar(1);
-  }
+  const att = attachHead(s, r.group, bs, ui.view === 'full');
+  s.root.scale.setScalar(ui.scene === 'room' ? 1 : 10); // room: Mii and room share body units (POD Units 0.01)
+  lastBuild = { ...att, height: ui.height ?? r.height, build: ui.build ?? r.build, heightFromMii: r.height, buildFromMii: r.build, bodyScale: bs ? { ax: +bs.a.x.toFixed(3), ay: +bs.a.y.toFixed(3), b: +bs.b.x.toFixed(3) } : null, view: ui.view, dress: ui.dress, wardrobe: wardrobeCount(), afl: afl ? { file: afl.fileName, known: !!afl.known } : null };
   return { ms: performance.now() - t0 };
 }
+
+/** The last build of the user's Mii (diagnostics). */
+let lastBuild: (HeadAttach & Record<string, unknown>) | null = null;
 
 /** Accessories follow their RootType joint on the skinned body (see Wardrobe.accessoryTransform). */
 function placeAccessories(s: Slot) {
@@ -436,7 +428,7 @@ function setupRoom(s: Slot) {
   director.idleVariations = !LAB;
   interactables = director.boxes.map((b) => director!.interactable(b)).filter((x): x is Interactable => !!x);
   if (s.body) director.calibrate(s.body);
-  if (!sound) { sound = new RoomSound(); if (gestured) sound.unlock(); sound.setEnabled(ui.audio); sound.setLevels(soundLevels.music, soundLevels.effects); sound.setChannels(soundSw.music, soundSw.effects); }
+  ensureSound();
   roomUi.root.hidden = false; roomUi.applySkin();
   roomUi.ctx = { nickname: nicknameOverride || lastName || 'Mii', female: lastGender === 'f', greetings: greetCtx() };
   if (!LAB) ui.roomCam = 'original';
@@ -451,7 +443,7 @@ function setupRoom(s: Slot) {
   setDiag('Oggetti interattivi', interactables.map((o) => `${o.name}→${o.clip.replace(/^anim/, '')}`).join(', ') || 'nessuno');
   const tx = textsAvailable();
   setDiag('Testi', tx.lang ? `${tx.lang} · ${tx.files} file MSBT` : 'non importati (PLACEHOLDER)');
-  setDiag('Audio', `${sound.tablesLoaded}/${sound.tablesExpected} tabelle · ${sound.filesAvailable} file`);
+  { const snd = ensureSound(); setDiag('Audio', `${snd.tablesLoaded}/${snd.tablesExpected} tabelle · ${snd.filesAvailable} file`); }
   setDiag('Layout stanza', layoutAvailable() ? 'texture-room (sprite originali)' : 'non importato (stile CSS)');
   if (room!.notes.length) setDiag('Note stanza', room!.notes.join('; '));
   renderRoomControls();
@@ -465,10 +457,16 @@ let friendHost: Personality | null = null;   // M16: watching a friend's room �
  * null = back to the room music.
  */
 let sceneMusic: string | null = null;
+/** The page's RoomSound (made once per import of files: its sound tables come from them), unlocked when allowed. */
+function ensureSound(): RoomSound {
+  if (!sound) { sound = new RoomSound(); sound.setEnabled(ui.audio); sound.setLevels(soundLevels.music, soundLevels.effects); sound.setChannels(soundSw.music, soundSw.effects); }
+  if (gestured) sound.unlock();
+  return sound;
+}
 function setMusic(key: string | null) {
   sceneMusic = key;
-  if (!sound) { sound = new RoomSound(); if (gestured) sound.unlock(); sound.setEnabled(ui.audio); sound.setLevels(soundLevels.music, soundLevels.effects); sound.setChannels(soundSw.music, soundSw.effects); }
-  if (key) sound.bgm(key); else roomBgm();
+  const snd = ensureSound();
+  if (key) snd.bgm(key); else roomBgm();
 }
 function roomBgm() {
   if (sceneMusic && sound) { sound.bgm(sceneMusic); return; }
@@ -737,12 +735,7 @@ function buildGuestSlot(sp: GuestSpec, kind: ShaderKind): { slot: Slot; female: 
     if (part.cat === 'headwear') { m.group.userData.headwear = true; s.parts.push(m); continue; }
     s.parts.push(m); s.root.add(m.group);
   }
-  const skel = s.parts.find((p) => p.jointFrame('Head') && !p.group.userData.headwear) ?? null;
-  s.body = skel;
-  if (skel) {
-    skel.headAnchor.add(r.group);
-    for (const p of s.parts) if (p.group.userData.headwear) { p.applyPose(null, 0); p.group.scale.setScalar(10); skel.headAnchor.add(p.group); }
-  } else s.root.add(r.group);
+  attachHead(s, r.group, bs, true);
   s.root.scale.setScalar(1);
   return { slot: s, female: gender === 'f' };
 }
@@ -1226,7 +1219,7 @@ async function onFiles(files: File[]) {
 }
 function afterAssets() {
   clearWardrobeCache();
-  clearTextCache(); clearSpriteCache(); clearClosetCache(); resetExpressions(); effects.reset(); sound?.dispose(); sound = null; loadRoomFont();
+  clearTextCache(); clearSpriteCache(); clearClosetCache(); resetExpressions(); effects.reset(); sound?.reload(); loadRoomFont();
   renderChecklist();
   renderWardrobe();
   $('forgetRes').hidden = !afl && !status?.shader;
@@ -1515,6 +1508,67 @@ function p2pBridge(c: P2PClient) {
 }
 const LAUNCHER = !LAB && new URLSearchParams(location.search).get('launcher') === '1';
 const DESKTOP = (window as unknown as { mtwDesktop?: { isDesktop: true } & LauncherDesktop }).mtwDesktop ?? null;
+// the desktop app allows sound without a first click (Electron autoplay policy); the first click resumes it anyway
+if (DESKTOP) gestured = true;
+// the system voices arrive asynchronously: choose the voice again when they do (HOTFIX 2026-10-28)
+onVoicesChanged(() => { const v = resolveVoice(voicePref); if (v !== voice) { voice.stop(); voice = v; } });
+
+/**
+ * Launcher music: the original title music when the user's files have its whole chain, else the room's.
+ * The reason of the choice is kept (diagnostics). Returns what was asked and why.
+ */
+let launcherAudio: { which: 'title' | 'room' | 'none'; title: BgmStatus | null; status: BgmStatus | null; context: string } | null = null;
+async function startMusic(): Promise<NonNullable<typeof launcherAudio>> {
+  const snd = ensureSound();
+  const title = snd.explain('bgm_titleSceneInit');
+  let which: 'title' | 'room' | 'none';
+  if (title.state === 'loading') { setMusic('bgm_titleSceneInit'); which = 'title'; }
+  else if (director) { setMusic(null); which = 'room'; }
+  else { snd.bgm('bgm_room'); which = snd.explain('bgm_room').state === 'loading' ? 'room' : 'none'; }
+  // wait for the music to start (decoding) or to fail, at most 6 s
+  for (let i = 0; i < 60 && snd.lastBgm?.state === 'loading'; i++) await new Promise((r) => setTimeout(r, 100));
+  launcherAudio = { which, title, status: snd.lastBgm, context: audioContext()?.state ?? 'non creato' };
+  return launcherAudio;
+}
+/** Audio test of the launcher's diagnostics: one sound effect from the user's files. */
+async function testEffect() {
+  const snd = ensureSound();
+  const ev = snd.testEvent();
+  if (!ev) return { ok: false, why: snd.status().tables.missing.some((t) => t.startsWith('Wave/')) ? 'tabelle effetti (Sound/Wave/*.msbt) non importate' : 'nessun file .wav degli effetti importato (zip sound_*)' };
+  const n = snd.log.length;
+  snd.play(ev);
+  await new Promise((r) => setTimeout(r, 700));
+  const e = snd.log.slice(n).pop();
+  const decodeErr = [...snd.missing].find((m) => e?.file && m.startsWith(e.file));
+  return { ok: !!e?.played && !decodeErr, event: ev, file: e?.file ?? null, why: decodeErr ?? e?.why ?? null, context: audioContext()?.state ?? 'non creato' };
+}
+/** Voice test: a line through the active voice provider (the original Miitomo voice is not available on the Web). */
+async function testVoice(lang: 'it' | 'en') {
+  const text = lang === 'it' ? 'Ciao! Questa è la voce di prova del tuo Mii.' : 'Hi! This is your Mii\'s test voice.';
+  if (voice.id !== 'web-tts') { const v = resolveVoice(voicePref); if (v !== voice) voice = v; }
+  if (voice.id !== 'web-tts') return { ok: false, provider: voice.id, why: PROVIDERS.find((p) => p.id === 'web-tts')?.unavailable() ?? 'voce disattivata nelle impostazioni', report: voiceReport() };
+  voice.speak(text, voiceParams, lang);
+  await new Promise((r) => setTimeout(r, 900));
+  const rep = voiceReport();
+  return { ok: !rep.lastError && !!rep.lastSpoken, provider: voice.id, why: rep.lastError, report: rep };
+}
+/** Everything the launcher's diagnostics show (and the "copy report" button copies). */
+async function diagnostics() {
+  const host = slots[ui.shade === 'ab' ? 'original' : ui.shade] ?? null;
+  let files: unknown = null, sources: string[] = [];
+  try { files = DESKTOP ? await (DESKTOP as unknown as { assets: { info(): Promise<unknown> } }).assets.info() : null; } catch { /* */ }
+  try { sources = await loadSources(); } catch { /* */ }
+  const vs = vfs.stats();
+  const snd = sound;
+  return {
+    at: new Date().toISOString(), screen: play?.currentScreen ?? null, desktop: !!DESKTOP, userAgent: navigator.userAgent,
+    files, importedSources: sources,
+    vfs: { ...vs, soundFiles: [...vfs.keys()].filter((k) => /^sound\/[^/]+\.(wav|mp3)$/.test(k)).length, bodyItems: wardrobeCount(), animations: Object.keys(orig.anims ?? {}).length || null, engine: engine.ready, afl: afl ? { file: afl.fileName, known: !!afl.known } : null },
+    audio: { audioOn: ui.audio, switches: { ...soundSw }, sound: snd?.status() ?? 'nessun RoomSound ancora (le tabelle arrivano con i file)', launcher: launcherAudio, title: snd?.explain('bgm_titleSceneInit') ?? null, room: snd?.explain('bgm_room') ?? null },
+    voice: { provider: voice.id, pref: voicePref, ...voiceReport() },
+    mii: { build: lastBuild, measured: measureMii(host) },
+  };
+}
 /** The account's P2P engine (hidden page of the desktop app); its friends join the game's friends. */
 const p2p = DESKTOP && play ? new P2PClient() : null;
 if (p2p && play) play.social = withP2P(play.social, p2p);
@@ -1523,7 +1577,9 @@ if (LAUNCHER && play) {
   void import('./launcher/Launcher').then((m) => m.mountLauncher({
     screen: () => play.currentScreen, logo: () => play.logo, desktop: DESKTOP,
     // the original title music when the user's files have it, else the room music (never bundled with the app)
-    music: () => { sound?.unlock(); if (sound?.canPlay('bgm_titleSceneInit')) setMusic('bgm_titleSceneInit'); },
+    music: () => startMusic(),
+    diagnostics: () => diagnostics(),
+    tests: { music: () => startMusic(), effect: () => testEffect(), voice: (l: 'it' | 'en') => testVoice(l), mute: (on: boolean) => { ui.audio = !on; sound?.setEnabled(!on); return { audioOn: ui.audio, bgm: sound?.lastBgm ?? null }; } },
     friends: p2p ? (el) => { let un: (() => void) | null = null, gone = false; void import('./p2p/FriendsPanel').then((f) => { if (!gone) un = f.friendsPanel(p2p)(el); }); return () => { gone = true; un?.(); }; } : null,
   }));
 }
@@ -1583,7 +1639,7 @@ function shopProbe() {
   const meshes = meshBoxes(b.model).map(({ name, box: bb }) => { const c = bb.getCenter(new THREE.Vector3()), z = bb.getSize(new THREE.Vector3()); return { name, c: c.toArray().map((v) => +v.toFixed(1)), s: z.toArray().map((v) => +v.toFixed(1)) }; });
   return { box: [b.box.min.toArray(), b.box.max.toArray()], n: meshes.length, big: meshes.sort((x, y) => y.s[0] * y.s[1] * y.s[2] - x.s[0] * x.s[1] * x.s[2]).slice(0, 25), lights: !!b.lights, build: b };
 }
-(window as any).__mtw = { get p2p() { return p2p; }, LAUNCHER, listenerCounts: () => ({ tick: tickListeners.size, speech: speechListeners.size, player: playerListeners.size, guest: guestListeners.size, pendingSays: pendingSays.length }), get reboot() { return reboot; }, REBOOT_ON, get framing() { return framing ? { dolly: framing.dolly, shiftNdc: framing.shiftNdc, position: framing.position.toArray(), target: framing.target.toArray() } : null; }, gestureInfo, get guest() { return guests[0] ?? null; }, get guests() { return guests; }, get talker() { return talker; }, guestLog, guestArrive, guestLeave, get doorOwner() { return doorOwner === director ? 'host' : doorOwner ? 'guest' : null; }, get soundSw() { return soundSw; }, ruleInfo, PERSONALITIES, touchMenu, ccam, closetCamZoom, closetCamPan, socialLib: { sanitizeFriend }, get venue() { return venue; }, shopProbe, effects, playEffect, vfs, voiceLog, get voice() { return voice; }, play, playApi, LAB, speakLog, get personality() { return personality; }, get emoFace() { return emoFace; }, floorAt, camera, simRoom, roomPick, testClock, get sound() { return sound; }, roomUi, get interactables() { return interactables; }, clock, stagePoint, get room() { return room; }, get director() { return director; }, roomClick, projectRoom, engine, ui, view, slots, outfit, OUTFIT_1, get lastRes() { return lastRes; }, get lastScale() { return lastScale; }, catalog, applyPose, rebuild, randomMii, onFiles, renderer, orig, get status() { return status; }, get miiData() { return miiData; }, set miiData(v: Uint8Array | null) { miiData = v; } };
+(window as any).__mtw = { get p2p() { return p2p; }, LAUNCHER, diagnostics, startMusic, testEffect, testVoice, measureMii: () => measureMii(slots[ui.shade === 'ab' ? 'original' : ui.shade] ?? null), get lastBuild() { return lastBuild; }, listenerCounts: () => ({ tick: tickListeners.size, speech: speechListeners.size, player: playerListeners.size, guest: guestListeners.size, pendingSays: pendingSays.length }), get reboot() { return reboot; }, REBOOT_ON, get framing() { return framing ? { dolly: framing.dolly, shiftNdc: framing.shiftNdc, position: framing.position.toArray(), target: framing.target.toArray() } : null; }, gestureInfo, get guest() { return guests[0] ?? null; }, get guests() { return guests; }, get talker() { return talker; }, guestLog, guestArrive, guestLeave, get doorOwner() { return doorOwner === director ? 'host' : doorOwner ? 'guest' : null; }, get soundSw() { return soundSw; }, ruleInfo, PERSONALITIES, touchMenu, ccam, closetCamZoom, closetCamPan, socialLib: { sanitizeFriend }, get venue() { return venue; }, shopProbe, effects, playEffect, vfs, voiceLog, get voice() { return voice; }, play, playApi, LAB, speakLog, get personality() { return personality; }, get emoFace() { return emoFace; }, floorAt, camera, simRoom, roomPick, testClock, get sound() { return sound; }, roomUi, get interactables() { return interactables; }, clock, stagePoint, get room() { return room; }, get director() { return director; }, roomClick, projectRoom, engine, ui, view, slots, outfit, OUTFIT_1, get lastRes() { return lastRes; }, get lastScale() { return lastScale; }, catalog, applyPose, rebuild, randomMii, onFiles, renderer, orig, get status() { return status; }, get miiData() { return miiData; }, set miiData(v: Uint8Array | null) { miiData = v; } };
 
 // Boot: restore cached files if present.
 (async () => {

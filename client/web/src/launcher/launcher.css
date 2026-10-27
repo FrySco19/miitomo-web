@@ -69,3 +69,16 @@
 /* the text logo (used when the user's APK logo is not imported yet) on the light launcher */
 .ln-logo .pl-logo-word { color: var(--accent); text-shadow: 0 3px 0 rgba(150, 70, 20, .18); }
 .ln-logo .pl-logo-sub { color: var(--ink2); }
+/* diagnostics */
+.dg { list-style: none; margin: 0 0 6px; padding: 0; display: grid; gap: 2px; font-size: 12.5px; }
+.dg li { display: grid; grid-template-columns: 11em 1fr; gap: 8px; padding: 4px 8px; border-radius: 8px; background: #faf6f1; }
+.dg li span { color: #6b6058; }
+.dg li b { font-weight: 700; color: #3b3530; overflow-wrap: anywhere; }
+.dg li.bad { background: #ffe5e0; }
+.dg li.bad b { color: #9a2f17; }
+.ln-diag h3 { margin: 10px 0 4px; font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: #7a6f66; }
+.dg-tests { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0; }
+.dg-result { min-height: 1.3em; margin: 6px 0; font-weight: 700; font-size: 13px; color: #6b6058; overflow-wrap: anywhere; }
+.dg-result[data-good="true"] { color: #2f7d3d; }
+.dg-result[data-good="false"] { color: #9a2f17; }
+.ln-foot .ln-link { font-size: 12px; }
