@@ -648,7 +648,9 @@ function projectRoom(x: number, y: number, z: number) {
  * director (state machine, path, door), faces, gestures, voice settings and sounds; the room, door and furniture are
  * shared. Arrival spot, personal distance, wandering and the visit schedule are APPROXIMATED (server-driven originally).
  */
-interface Guest { spec: GuestSpec; slot: Slot; director: RoomDirector; personality: Personality; ctx: RenderCtxT; female: boolean; face: { cur: number; mouthT: number; blinkT: number; blinking: number; seed: number }; emo: FaceTriple | null; leaving: boolean; leaveWanted: boolean; log: string[]; byeT?: number; byeGo?: () => void }
+interface Guest { spec: GuestSpec; slot: Slot; director: RoomDirector; personality: Personality; ctx: RenderCtxT; female: boolean; face: { cur: number; mouthT: number; blinkT: number; blinking: number; seed: number }; emo: FaceTriple | null; leaving: boolean; leaveWanted: boolean; log: string[]; byeT?: number; byeGo?: () => void;
+  /** 0.2: a real player's Mii that is leaving the session (removed once outside; otherwise it may come back in). */
+  removing?: boolean }
 type RenderCtxT = { nickname: string; female: boolean; greetings: Record<string, string> };
 /**
  * Visiting Miis in the room. CLASSIC: one friend at a time (guestCap 1 — the original visit flow shows one friend;
@@ -878,6 +880,8 @@ function onGuestEvent(g: Guest, e: DirectorEvent) {
     case 'door': doorOwner = g.director; sound?.action(`doorAnim/${e.name}`); break;
     case 'touch': sound?.play('se_nade01', 'SequenceTouch:se_nade01'); playEffect('arStroke', g.slot.root); break;
     case 'state':
+      // a real player who only stepped out (still in the session) stays, hidden, and can come back in through the door
+      if (e.to === 'outside' && e.from === 'exiting' && g.spec.remote && !g.removing) { glog(`fuori ${g.spec.name}`); break; }
       if (e.to === 'outside' && e.from === 'exiting') { glog(`uscito ${g.spec.name}`); emitGuest({ type: 'leave', id: g.spec.id, name: g.spec.name }); disposeGuest(g); }
       break;
     case 'reactionEnd':
@@ -1631,6 +1635,7 @@ const mpHost: SceneHost = {
   },
   despawn: (id, viaDoor) => {
     const g = guests.find((x) => x.spec.id === id && x.spec.remote); if (!g) return;
+    g.removing = true;
     if (viaDoor && (g.director.state === 'idle' || g.director.state === 'walking')) waitDoor(g);   // goes out; removed once outside
     else { disposeGuest(g); emitGuest({ type: 'leave', id: g.spec.id, name: g.spec.name }); }
   },
