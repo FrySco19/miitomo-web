@@ -14,6 +14,7 @@ import { SocialHub } from './hub/SocialHub';
 import { HubScreen } from './hub/HubScreen';
 import { createLocalProvider, createServerProvider } from './api/provider';
 import type { RebootApi } from './api/contracts';
+import { shellLabels } from './i18n/shell';
 import { I18n, safeKv } from './i18n/i18n';
 import { LocalPlacesService, GAMES_ID } from './places/LocalPlacesService';
 import { PlaceVisit } from './places/PlaceVisit';
@@ -278,6 +279,9 @@ export function bootReboot(host: RebootHost, opts: { serverUrl?: string | null; 
   };
   applySettings();
   unsubs.push(settings.subscribe(applySettings));
+  // the shared bottom bar / Menu follow the Reboot language (Italian = the original texts)
+  host.setShellLabels(shellLabels(i18n));
+  unsubs.push(i18n.subscribe(() => host.setShellLabels(shellLabels(i18n))), () => host.setShellLabels(null));
   if (games && phoneView) unsubs.push(games.subscribe((e) => { if (e.type !== 'session' || e.e.type === 'aborted' || e.e.type === 'finished') phoneView.sync(); }));
   if (miinstagram && phone && flags.on('MIIFOTO2_ENABLED')) {
     // Miifoto 2: the Miifoto screen gets "share on MIInstagram"; the photo becomes the draft of a post on the phone

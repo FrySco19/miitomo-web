@@ -79,6 +79,8 @@ export class FakeHost implements RebootHost {
   setRenderQuality(q: 'high' | 'balanced' | 'low') { this.quality = q; }
   p2pLink: import('../../client/web/src/reboot/host').RebootP2P | null = null;
   p2p() { return this.p2pLink; }
+  shellLabels: ((file: string, label: string) => string | null) | null = null;
+  setShellLabels(fn: ((file: string, label: string) => string | null) | null) { this.shellLabels = fn; }
   setPlayerName(name: string) { const n = name.trim().slice(0, 10); if (!n) return false; this.playerName = n; return true; }
   /** The player taps an object in the room (main.ts roomClick: asks the object policy first). */
   tapObject(name: string) { return !this.objectPolicy || this.objectPolicy(name) ? this.interact('host', name) : false; }

@@ -336,6 +336,25 @@ for (const [q, want] of [['reboot=0', false], ['reboot=1', true]]) {
   else expect('J control ?reboot=1: exactly one more chunk (Reboot) is downloaded and the R5 layer exists', r.r5 && r.dock && r.on === true && extra.length === 1, { ...r, statics, extra });
   await c.close();
 }
+// ---- K: the real built app — the shared bottom bar follows the Reboot language (Classic keeps the Italian originals)
+{
+  const bar = (p) => p.evaluate(() => { window.__mtw.play.renderBar(); window.__mtw.play.openTab('menu'); return [...document.querySelectorAll('.pl-nav .pl-tab-label, .pl-mbtn span')].map((e) => e.textContent); });
+  const c = await browser.newContext({ viewport: { width: 1200, height: 800 }, locale: 'it-IT' }); const p = await c.newPage();
+  // no game files: Play settles on its setup screen first (it would replace a bar drawn earlier)
+  await p.goto(`http://127.0.0.1:${port}/?reboot=1`); await p.waitForFunction(() => !!window.__mtw?.reboot && window.__mtw.play.currentScreen === 'setup', null, { timeout: 15000 });
+  const it0 = await bar(p);
+  await p.evaluate(() => window.__mtw.reboot.i18n.set('en'));
+  const live = await p.evaluate(() => [...document.querySelectorAll('.pl-nav .pl-tab-label, .pl-mbtn span')].map((e) => e.textContent));
+  const en1 = await bar(p);
+  await p.evaluate(() => window.__mtw.reboot.i18n.set('it'));
+  const it1 = await p.evaluate(() => [...document.querySelectorAll('.pl-nav .pl-tab-label')].map((e) => e.textContent));
+  expect('K Reboot: bottom bar + Menu switch to English at once and back to Italian', it0[1] === 'La mia pagina' && live[1] === 'My page' && live[4] === 'Menu' && live.includes('Closet') && en1[1] === 'My page' && en1.includes('Decorate room') && it1[1] === 'La mia pagina', { it0, live, en1, it1 });
+  await p.evaluate(() => window.__mtw.reboot.i18n.set('en'));
+  await p.goto(`http://127.0.0.1:${port}/?reboot=0`); await p.waitForFunction(() => window.__mtw?.play?.currentScreen === 'setup', null, { timeout: 15000 });
+  const classic = await bar(p);
+  expect('K Classic ?reboot=0: the bar keeps the original Italian labels even with English chosen in Reboot', classic[1] === 'La mia pagina' && !classic.includes('My page'), classic);
+  await c.close();
+}
 await browser.close(); server.close();
 const relevant = logs.filter((l) => !/favicon|ffl|Failed to load resource/.test(l));
 expect('no page errors / warnings during the run', relevant.length === 0, relevant.slice(0, 5));

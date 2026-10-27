@@ -42,8 +42,16 @@ export function line(rel: string, label: string): Line | null {
   return null;
 }
 export function label(rel: string, label: string, fallback: string): string {
+  const o = override?.(rel, label); if (o != null) return o;
   const l = line(rel, label); return l ? plain(l.nodes).replace(/\n/g, ' ') : fallback;
 }
+/**
+ * REBOOT only (Classic never sets it): a short UI label in the Reboot language instead of the Italian original
+ * (bottom bar, menu). null from the override = keep the original text.
+ */
+type LabelOverride = (rel: string, label: string) => string | null;
+let override: LabelOverride | null = null;
+export function setLabelOverride(fn: LabelOverride | null) { override = fn; }
 export function textsAvailable(): { lang: string | null; files: number } {
   let files = 0, lang: string | null = null;
   for (const l of LANGS) { const n = [...vfs.keys()].filter((k) => k.startsWith(`message/Release/Console/${l}/Client/`) && !k.includes('/Sound/')).length; if (n) { files += n; lang ??= l; } }

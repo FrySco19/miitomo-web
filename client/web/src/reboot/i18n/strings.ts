@@ -167,6 +167,11 @@ const en: Record<string, string> = {
   'earn.welcome': 'Welcome to Reboot', 'earn.daily': 'First visit of the day', 'earn.game.played': 'Match played', 'earn.game.win': 'Match won',
   'earn.game.badge': 'New badge: {name}', 'earn.post.photo': 'Photo posted', 'earn.visit.friend': 'Visit to {name}', 'earn.friend.level': '{name} is now: {level}',
   'spend.shop': 'Bought: {item}', 'wallet.toast': '+{n} · {why}',
+
+  // R6 hotfix — the shared bottom bar / friend-room bar / Menu (Italian keeps the original texts)
+  'shell.home': 'Home', 'shell.page': 'My page', 'shell.friends': 'Friends', 'shell.shop': 'Shop', 'shell.menu': 'Menu',
+  'shell.answers': 'Answers', 'shell.items': 'Items', 'shell.profile': 'Profile',
+  'shell.closet': 'Closet', 'shell.editMii': 'Edit Mii', 'shell.decorate': 'Decorate room', 'shell.miifoto': 'Miifoto', 'shell.greetings': 'Greetings', 'shell.settings': 'Settings',
 };
 
 const it: Record<string, string> = {
@@ -322,6 +327,10 @@ const it: Record<string, string> = {
   'earn.welcome': 'Benvenuto in Reboot', 'earn.daily': 'Prima visita del giorno', 'earn.game.played': 'Partita giocata', 'earn.game.win': 'Partita vinta',
   'earn.game.badge': 'Nuovo distintivo: {name}', 'earn.post.photo': 'Foto pubblicata', 'earn.visit.friend': 'Visita a {name}', 'earn.friend.level': '{name} ora è: {level}',
   'spend.shop': 'Comprato: {item}', 'wallet.toast': '+{n} · {why}',
+
+  'shell.home': 'Home', 'shell.page': 'La mia pagina', 'shell.friends': 'Amici', 'shell.shop': 'Negozio', 'shell.menu': 'Menu',
+  'shell.answers': 'Risposte', 'shell.items': 'Articoli', 'shell.profile': 'Profilo',
+  'shell.closet': 'Guardaroba', 'shell.editMii': 'Modifica Mii', 'shell.decorate': 'Arreda stanza', 'shell.miifoto': 'Miifoto', 'shell.greetings': 'Saluti', 'shell.settings': 'Impostazioni',
 };
 
 /** Registry of language tables: adding a language = adding its table here (missing keys fall back to English). */

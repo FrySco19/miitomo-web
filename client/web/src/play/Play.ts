@@ -110,6 +110,8 @@ const T = {
 };
 const CS = 'Layout/common/parts/cmnSection00.msbt', ML = 'Layout/system/parts/layer1/modalListBtn00.msbt', D2 = 'Layout/system/parts/layer1/dialog002.msbt', CB = 'Layout/system/parts/layer2/cmnBtn00.msbt', T_ROOMW = 'Scene/RoomSceneTalkWords.msbt';
 const lb = (rel: string, key: string, fb: string) => label(rel, key, fb).replace(/\s+/g, ' ').trim();
+/** Where a label came from, so relabel() can draw it again in another language (Reboot). */
+const lbAttr = (rel: string, key: string, fb: string) => `data-lrel="${esc(rel)}" data-lkey="${esc(key)}" data-lfb="${esc(fb)}"`;
 const clean = (rel: string, key: string, fb: string) => { const l = line(rel, key); if (!l) return fb; return render(l.nodes, { nickname: '', female: false }).pages.map((p) => p.spans.map((s) => s.text).join('')).join('\n').trim() || fb; };
 
 /**
@@ -368,8 +370,10 @@ export class Play {
     const ic = commonIcon(BAR_ICON[icon]);
     const on = this.barOn === id;
     const base = tabBase(on);
-    return `<button class="pl-tab ${on ? 'on' : ''}" ${attr}="${id}" ${off ? `disabled title="${esc(off)}"` : ''} aria-pressed="${on}"><span class="pl-tab-ico ${ic ? 'orig' : ''}" style="${base}" aria-hidden="true">${ic ? `<img src="${ic}" alt="" />` : ''}</span><span class="pl-tab-label">${esc(lb(rel, key, fb))}</span></button>`;
+    return `<button class="pl-tab ${on ? 'on' : ''}" ${attr}="${id}" ${off ? `disabled title="${esc(off)}"` : ''} aria-pressed="${on}"><span class="pl-tab-ico ${ic ? 'orig' : ''}" style="${base}" aria-hidden="true">${ic ? `<img src="${ic}" alt="" />` : ''}</span><span class="pl-tab-label" ${lbAttr(rel, key, fb)}>${esc(lb(rel, key, fb))}</span></button>`;
   }
+  /** REBOOT: the language changed — redraw the short labels on screen (bar, menu) without rebuilding the screen. */
+  relabel() { this.root.querySelectorAll<HTMLElement>('[data-lrel]').forEach((e) => { e.textContent = lb(e.dataset.lrel!, e.dataset.lkey!, e.dataset.lfb!); }); }
   private renderBar() {
     const shopOff = this.api.shopAvailable() || this.api.catalog().size ? undefined : 'Servono i file del negozio (CDN asset_model_shop_output, layout shop)';
     this.root.innerHTML = `<nav class="pl-nav" aria-label="Menu principale">
@@ -403,8 +407,8 @@ export class Play {
     if (id === 'friends') return this.openFriends();
   }
   private openMenu() {
-    const it = (a: string, rel: string, key: string, fb: string, off?: string) => `<button class="pl-mbtn" data-a="${a}" ${off ? `disabled title="${esc(off)}"` : ''}>${esc(lb(rel, key, fb))}</button>`;
-    const s = this.sheet(`<h2>${esc(lb(T.tabs, 'title00@menu00', 'Menu'))}</h2><div class="pl-grid">
+    const it = (a: string, rel: string, key: string, fb: string, off?: string) => `<button class="pl-mbtn" data-a="${a}" ${off ? `disabled title="${esc(off)}"` : ''}><span ${lbAttr(rel, key, fb)}>${esc(lb(rel, key, fb))}</span></button>`;
+    const s = this.sheet(`<h2 ${lbAttr(T.tabs, 'title00@menu00', 'Menu')}>${esc(lb(T.tabs, 'title00@menu00', 'Menu'))}</h2><div class="pl-grid">
       ${it('closet', T.menu1, 'title00@changeCloth00', 'Guardaroba')}${it('remake', T.menu1, 'title00@remakeMii00', 'Modifica Mii')}${it('room', T.menu1, 'title00@customRoom00', 'Arreda stanza')}
       ${it('foto', T.menu1, 'title00@miiPhoto00', 'Miifoto', MF.miifotoAvailable() ? undefined : 'Servono i file Miifoto del CDN (archCamera)')}${it('greet', T.menu4, 'title00@greeting00', 'Saluti')}${it('config', T.menu4, 'title00@config00', 'Impostazioni')}
     </div>`);

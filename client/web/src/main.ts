@@ -28,7 +28,7 @@ import { personalityType } from './play/Personality';
 import { Effects } from './effects/Effects';
 import { buildShop, meshBoxes, shopAvailable, ShopBuild } from './room/Shop';
 import { PROVIDERS, resolveVoice, speakable, DEFAULT_VOICE, VoicePref, VoiceParams, VoiceProvider, setWebTtsPrefs, voiceReport, onVoicesChanged } from './voice/Voice';
-import { line, label, textsAvailable, clearTextCache } from './room/RoomText';
+import { line, label, textsAvailable, clearTextCache, setLabelOverride } from './room/RoomText';
 import { layoutAvailable, clearSpriteCache } from './room/LayoutSprites';
 import { Play, PlayApi, GuestSpec } from './play/Play';
 import { clearClosetCache } from './play/Closet';
@@ -1627,6 +1627,7 @@ if (REBOOT_ON && play) {
     setVolumes: (v) => { soundLevels = { music: v.music, effects: v.effects }; sound?.setLevels(v.music, v.effects); setWebTtsPrefs({ level: v.voice }); },
     setRenderQuality: (q) => { pixelCap = q === 'low' ? 1 : q === 'balanced' ? 1.5 : 2; renderer.setPixelRatio(Math.min(window.devicePixelRatio, pixelCap)); resize(); },
     p2p: () => (p2p ? p2pBridge(p2p) : null),
+    setShellLabels: (fn) => { setLabelOverride(fn); play.relabel(); },
     setPlayerName: (name) => { const n = name.trim().slice(0, 10); if (!n) return false; play.save.profile.name = n; playApi.setNickname(n); void play.persist(); return true; },
   };
   import('./reboot/index').then((m) => { reboot = m.bootReboot(host); }).catch((e) => console.warn('Reboot non caricato (Classic continua):', e));

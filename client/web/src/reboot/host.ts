@@ -81,6 +81,11 @@ export interface RebootHost {
   setVolumes(v: { music: number; effects: number; voice: number }): void;
   /** Pixel-ratio cap of the 3D view: high = 2 (Classic), balanced = 1.5, low = 1. */
   setRenderQuality(q: 'high' | 'balanced' | 'low'): void;
+  /**
+   * The short labels of the shared shell (bottom bar, menu) in the Reboot language: `fn(file, label)` returns the text,
+   * or null to keep the original Italian one; the labels on screen are redrawn at once. null = originals everywhere.
+   */
+  setShellLabels(fn: ((file: string, label: string) => string | null) | null): void;
   /** The user's display name (the Mii nickname of the save, max 10). false = refused (empty). */
   setPlayerName(name: string): boolean;
   /** Desktop app: the real friends connected peer-to-peer (null = not the desktop app, or P2P not running). */
