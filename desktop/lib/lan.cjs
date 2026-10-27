@@ -11,6 +11,14 @@ const os = require('node:os');
 const { EventEmitter } = require('node:events');
 
 const PORT = 47777, BEACON_MS = 2000, EXPIRE_MS = 7000, MAX_MSG = 60_000;
+/**
+ * 0.2 FIX: two copies of the game on ONE computer (two accounts) both bound 47777 with SO_REUSEADDR: beacons reached
+ * both, but a set-up message sent to "that computer:47777" reached only one of the two sockets, often the wrong one,
+ * which dropped it (not for me) — so two instances on one PC never connected. Now each instance binds the first free
+ * port of a small range and beacons go to every port of the range (broadcast + this computer), so each copy has its
+ * own address and replies go to the port the peer really uses.
+ */
+const SPAN = 6;
 
 /** Broadcast addresses of the IPv4 interfaces (+ the limited broadcast). */
 function broadcasts() {
@@ -25,21 +33,38 @@ function broadcasts() {
 
 class Lan extends EventEmitter {
   /** `opts.targets` (tests): send beacons to these host:port instead of broadcasting. */
-  constructor(opts = {}) { super(); this.port = opts.port ?? PORT; this.targets = opts.targets ?? null; this.peers = new Map(); this.routes = new Map(); this.me = null; this.sock = null; this.timer = null; this.rate = new Map(); }
+  constructor(opts = {}) { super(); this.base = opts.port ?? PORT; this.span = opts.span ?? SPAN; this.port = null; this.targets = opts.targets ?? null; this.peers = new Map(); this.routes = new Map(); this.me = null; this.sock = null; this.timer = null; this.rate = new Map(); }
+  /** Binds the first free port of base..base+span-1 (exclusive bind: one copy of the game per port). */
+  bindFree() {
+    return new Promise((resolve) => {
+      const tryPort = (k) => {
+        if (k >= this.span) { resolve(null); return; }
+        const s = dgram.createSocket({ type: 'udp4', reuseAddr: false });
+        s.once('error', () => { try { s.close(); } catch { /* */ } tryPort(k + 1); });
+        s.bind(this.base + k, () => { s.removeAllListeners('error'); resolve(s); });
+      };
+      tryPort(0);
+    });
+  }
+  /** Where beacons go: the test targets, or every port of the range on every broadcast address and on this computer. */
+  dests() {
+    if (this.targets) return this.targets;
+    const out = [];
+    for (const h of [...broadcasts(), '127.0.0.1']) for (let k = 0; k < this.span; k++) if (h !== '127.0.0.1' || this.base + k !== this.port) out.push({ host: h, port: this.base + k });
+    return out;
+  }
   /** me = { id, pub, name, code }. */
   start(me) {
     this.me = { id: String(me.id), pub: String(me.pub), name: String(me.name ?? '').slice(0, 16), code: String(me.code ?? '') };
     if (this.sock) return Promise.resolve(true);
-    return new Promise((resolve) => {
-      const s = dgram.createSocket({ type: 'udp4', reuseAddr: true });
-      s.on('error', (e) => { this.emit('error', e.message); try { s.close(); } catch { /* */ } this.sock = null; resolve(false); });
+    return this.bindFree().then((s) => {
+      if (!s) { this.emit('error', `no free UDP port in ${this.base}..${this.base + this.span - 1}`); return false; }
+      s.on('error', (e) => { this.emit('error', e.message); });
       s.on('message', (buf, rinfo) => this.onMessage(buf, rinfo));
-      s.bind(this.port, () => {
-        try { s.setBroadcast(true); } catch { /* */ }
-        this.sock = s;
-        this.beacon(); this.timer = setInterval(() => { this.beacon(); this.expire(); }, BEACON_MS);
-        resolve(true);
-      });
+      try { s.setBroadcast(true); } catch { /* */ }
+      this.sock = s; this.port = s.address().port;
+      this.beacon(); this.timer = setInterval(() => { this.beacon(); this.expire(); }, BEACON_MS);
+      return true;
     });
   }
   stop() {
@@ -50,8 +75,7 @@ class Lan extends EventEmitter {
   beacon() {
     if (!this.sock || !this.me) return;
     const msg = Buffer.from(JSON.stringify({ v: 1, t: 'hello', ...this.me }));
-    const dests = this.targets ?? broadcasts().map((h) => ({ host: h, port: this.port }));
-    for (const d of dests) this.sock.send(msg, d.port, d.host, () => { /* unreachable networks are fine */ });
+    for (const d of this.dests()) this.sock.send(msg, d.port, d.host, () => { /* unreachable networks are fine */ });
   }
   expire() {
     const now = Date.now(); let changed = false;
@@ -86,7 +110,7 @@ class Lan extends EventEmitter {
     if (!this.sock || !this.me) return false;
     const body = Buffer.from(JSON.stringify({ v: 1, id: this.me.id, to: peerId, ...payload }));
     if (body.length > MAX_MSG) return false;
-    if (peerId === null) { for (const d of this.targets ?? broadcasts().map((h) => ({ host: h, port: this.port }))) this.sock.send(body, d.port, d.host, () => {}); return true; }
+    if (peerId === null) { for (const d of this.dests()) this.sock.send(body, d.port, d.host, () => {}); return true; }
     const p = this.peers.get(peerId) ?? this.routes.get(peerId); if (!p) return false;
     this.sock.send(body, p.port, p.host, () => {});
     return true;
