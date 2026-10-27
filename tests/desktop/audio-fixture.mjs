@@ -49,3 +49,10 @@ export function makeAudioFixture(dir, soundDir = dir) {
   fs.writeFileSync(path.join(dir, 'Miitomo_TEST.apk'), apk);
   fs.writeFileSync(path.join(soundDir, 'sound_TEST_mp3.zip'), zipSync({ 'sound/BGM_TESTROOM.mp3': MP3, 'sound/se_test.wav': wav() }));
 }
+/** Thumbnail keys of the fake dated weekly zip (closet item + Arreda stanza wall), as the CDN names them. */
+export const THUMB_KEYS = ['asset/capture2/small/character/bodyTops/bodyTops0001_00.webp', 'asset/capture2/large/room/roomWall/rmWl0001_AL00.webp'];
+/** A fake dated weekly CDN zip holding thumbnails (placeholder bytes: only their import is tested, not their pixels). */
+export function makeThumbFixture(dir, name = '20161110testwebp.zip', keys = THUMB_KEYS) {
+  fs.mkdirSync(dir, { recursive: true });
+  fs.writeFileSync(path.join(dir, name), zipSync(Object.fromEntries(keys.map((k) => [k, strToU8('RIFF-placeholder')]))));
+}

@@ -47,11 +47,12 @@ function scan(folder, depth = 3) {
 }
 /** What was found, by kind (shown by the launcher's diagnostics). */
 function summary(map) {
-  const k = { apk: 0, afl: 0, env: 0, anim: 0, body: 0, sound: 0, room: 0, other: 0 };
+  const k = { apk: 0, afl: 0, env: 0, anim: 0, body: 0, sound: 0, room: 0, thumbs: 0, other: 0 };
   for (const n of map.keys()) {
     if (/\.apk$/i.test(n)) k.apk++; else if (/AFLRes/i.test(n)) k.afl++; else if (/^asset_env/i.test(n)) k.env++;
     else if (/animation_output/i.test(n)) k.anim++; else if (/^asset_model_character_(body|headwear)/i.test(n)) k.body++;
-    else if (/^sound/i.test(n)) k.sound++; else if (/^asset_model_room_/i.test(n)) k.room++; else k.other++;
+    else if (/^sound/i.test(n)) k.sound++; else if (/^asset_model_room_/i.test(n)) k.room++;
+    else if (/^\d{8}[a-z0-9]+(webp|-message)?\.zip$|^asset_capture2/i.test(n)) k.thumbs++; else k.other++;
   }
   return k;
 }

@@ -1563,7 +1563,7 @@ async function diagnostics() {
   return {
     at: new Date().toISOString(), screen: play?.currentScreen ?? null, desktop: !!DESKTOP, userAgent: navigator.userAgent,
     files, importedSources: sources,
-    vfs: { ...vs, soundFiles: [...vfs.keys()].filter((k) => /^sound\/[^/]+\.(wav|mp3)$/.test(k)).length, bodyItems: wardrobeCount(), animations: Object.keys(orig.anims ?? {}).length || null, engine: engine.ready, afl: afl ? { file: afl.fileName, known: !!afl.known } : null },
+    vfs: { ...vs, soundFiles: [...vfs.keys()].filter((k) => /^sound\/[^/]+\.(wav|mp3)$/.test(k)).length, thumbnails: [...vfs.keys()].filter((k) => k.startsWith('asset/capture2/')).length, bodyItems: wardrobeCount(), animations: Object.keys(orig.anims ?? {}).length || null, engine: engine.ready, afl: afl ? { file: afl.fileName, known: !!afl.known } : null },
     audio: { audioOn: ui.audio, switches: { ...soundSw }, sound: snd?.status() ?? 'nessun RoomSound ancora (le tabelle arrivano con i file)', launcher: launcherAudio, title: snd?.explain('bgm_titleSceneInit') ?? null, room: snd?.explain('bgm_room') ?? null },
     voice: { provider: voice.id, pref: voicePref, ...voiceReport() },
     mii: { build: lastBuild, measured: measureMii(host) },

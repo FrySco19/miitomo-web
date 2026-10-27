@@ -155,7 +155,11 @@ const WANTED_SOURCE = [
   /^asset_model_character_(bodyAll|bodyTops|bodyTopslong|bodyBottomsA|bodyBottomsB|bodyShoes|bodyAcce|headwear|bodyMannequin|bodyShadow)/,
   /^asset_model_colorlist/, /^asset_model_camera/, /^xml_other_clothes/, /^asset_archCamera/, /^asset_layout_font/, /^asset_layout_v[\d-]+_room_/,
   /^message_Release_Arch_msbp/, /^asset_effect_output/, /^asset_model_shop_output/, /^asset_shopBanner2_/, /^asset_layout_v[\d-]+_shop_/, /^asset_layout_v[\d-]+_miiStudio_/, /^message_Release_Console_EUit/, /^message_Release_Console_JPja_EmotionExpression/,
-  /^sound(_[A-Za-z0-9-]+)*\.zip$/,   // M17 fix: sound_BGM_MiiWatch_Friend_Cool_mp3.zip etc. have several "_" parts /^\d{8}[a-z0-9]+(webp|-message)?\.zip$/
+  /^sound(_[A-Za-z0-9-]+)*\.zip$/,   // M17 fix: sound_BGM_MiiWatch_Friend_Cool_mp3.zip etc. have several "_" parts
+  // item / room thumbnails (closet, shop, Arreda stanza) and the updated clothes names: the dated weekly zips and
+  // asset_capture2_item. FIX 0.1.2: this rule had slipped into the comment above, so the local import (desktop app,
+  // serve-local) never read them and every closet / room thumbnail was missing; picking the files by hand was not affected.
+  /^\d{8}[a-z0-9]+(webp|-message)?\.zip$/, /^asset_capture2/,
 ];
 /**
  * Version of the keep rules. When a version adds entries to keep from sources the user may already have imported,

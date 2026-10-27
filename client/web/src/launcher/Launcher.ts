@@ -107,7 +107,8 @@ export function mountLauncher(h: LauncherHost) {
       </ul><p class="fp-note">${esc(t('voiceNote'))}</p>
       <h3>${esc(t('secFiles'))}</h3><ul class="dg">
         ${row('cartella', f.folder ?? '—')}
-        ${row('trovati', f.kinds ? `${f.files} — APK ${f.kinds.apk} · AFL ${f.kinds.afl} · env ${f.kinds.env} · animazioni ${f.kinds.anim} · corpo/vestiti ${f.kinds.body} · suoni ${f.kinds.sound} · stanza ${f.kinds.room} · altri ${f.kinds.other}` : f.files ?? '—', f.kinds && (!f.kinds.apk || !f.kinds.sound || !f.kinds.body))}
+        ${row('trovati', f.kinds ? `${f.files} — APK ${f.kinds.apk} · AFL ${f.kinds.afl} · env ${f.kinds.env} · animazioni ${f.kinds.anim} · corpo/vestiti ${f.kinds.body} · suoni ${f.kinds.sound} · stanza ${f.kinds.room} · miniature ${f.kinds.thumbs ?? 0} · altri ${f.kinds.other}` : f.files ?? '—', f.kinds && (!f.kinds.apk || !f.kinds.sound || !f.kinds.body || !f.kinds.thumbs))}
+        ${row('miniature importate (guardaroba, negozio, stanza)', vf.thumbnails ?? '—', !vf.thumbnails)}
         ${row('importati', (r.importedSources ?? []).length)}
         ${row('vestiti disponibili', vf.bodyItems, !vf.bodyItems)}
         ${row('risorsa testa (AFL)', vf.afl ? `${vf.afl.file}${vf.afl.known ? ' (verificata)' : ''}` : 'mancante', !vf.afl)}

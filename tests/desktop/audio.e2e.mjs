@@ -6,7 +6,7 @@
 // Run: npm --prefix client/web run build && xvfb-run -a node tests/desktop/audio.e2e.mjs
 import { _electron } from 'playwright';
 import fs from 'node:fs'; import os from 'node:os'; import path from 'node:path'; import { fileURLToPath } from 'node:url';
-import { makeAudioFixture } from './audio-fixture.mjs';
+import { makeAudioFixture, makeThumbFixture, THUMB_KEYS } from './audio-fixture.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
 const exe = path.join(root, 'desktop', 'node_modules', 'electron', 'dist', process.platform === 'win32' ? 'electron.exe' : 'electron');
@@ -16,6 +16,7 @@ const fail = []; const expect = (n, ok, info) => { if (!ok) fail.push(n); consol
 const tmp = (p) => fs.mkdtempSync(path.join(os.tmpdir(), p));
 const assets = tmp('mtw-audio-assets-'), userData = tmp('mtw-audio-ud-');
 makeAudioFixture(assets);              // APK + sound zip both in the folder itself (not local-assets/cdn)
+makeThumbFixture(path.join(assets, 'local-assets', 'cdn'));   // 0.1.2: a dated weekly zip with closet / room thumbnails
 const launch = () => _electron.launch({ executablePath: exe, args: [path.join(root, 'desktop', 'main.cjs'), '--no-sandbox'], env: { ...process.env, MTW_USER_DATA: userData, MTW_ASSETS: assets, MTW_LAN_PORT: '47861', MTW_LAN_TARGETS: '[]' } });
 const gameOf = (app) => app.waitForEvent('window', { predicate: (p) => p.url().includes('/index.html'), timeout: 20000 });
 const diag = (g) => g.evaluate(() => window.__mtw.diagnostics());
@@ -30,7 +31,9 @@ try {
   await g.waitForSelector('.ln-card');
   // the game imports the user's files by itself (first start, empty storage)
   let d = await diag(g);
-  for (let i = 0; i < 60 && d.importedSources.length < 2; i++) { await g.waitForTimeout(500); d = await diag(g); }
+  for (let i = 0; i < 60 && d.importedSources.length < 3; i++) { await g.waitForTimeout(500); d = await diag(g); }
+  const th = await g.evaluate((keys) => keys.map((k) => window.__mtw.vfs.has(k)), THUMB_KEYS);
+  expect('0.1.2 thumbnails: the dated weekly zip is found and its closet / room thumbnails are imported (were skipped by the local import)', d.files.kinds.thumbs === 1 && d.importedSources.includes('20161110testwebp.zip') && th.every(Boolean) && d.vfs.thumbnails === 2, { kinds: d.files.kinds, imp: d.importedSources, th, n: d.vfs.thumbnails });
   expect('files: the APK and the sound zip in the folder itself are found and imported (hotfix: was local-assets/cdn only)', d.files.kinds.apk === 1 && d.files.kinds.sound === 1 && d.importedSources.includes('sound_TEST_mp3.zip') && d.vfs.soundFiles === 2, { files: d.files, imp: d.importedSources, sf: d.vfs.soundFiles });
 
   // ---- launcher music (title missing → room) through the diagnostics UI
@@ -85,6 +88,10 @@ try {
 await app.close().catch(() => {});
 
 // ---- close and reopen: same account, files already kept, sound again
+// 0.1.2 upgrade path: a cache made by 0.1.1 lacks the thumbnail zips (they were skipped); a zip never imported before
+// must be imported by itself at the next start
+const LATE = 'asset/capture2/small/character/bodyShoes/bodyShoes0002_00.webp';
+makeThumbFixture(path.join(assets, 'local-assets', 'cdn'), '20161117latewebp.zip', [LATE]);
 app = await launch();
 try {
   const w = await app.firstWindow(); await w.waitForSelector('#f');
@@ -94,6 +101,8 @@ try {
   await g.waitForFunction(() => !!window.__mtw?.startMusic);
   const r = await g.evaluate(async () => { for (let i = 0; i < 50 && !(await window.__mtw.diagnostics()).vfs.soundFiles; i++) await new Promise((x) => setTimeout(x, 200)); return window.__mtw.startMusic(); });
   expect('reopened app: files from the local store, music plays again', r.status?.state === 'playing', r);
+  const late = await g.evaluate(async (k) => { for (let i = 0; i < 50 && !window.__mtw.vfs.has(k); i++) await new Promise((x) => setTimeout(x, 200)); const d = await window.__mtw.diagnostics(); return { has: window.__mtw.vfs.has(k), imported: d.importedSources.includes('20161117latewebp.zip'), n: d.vfs.thumbnails }; }, LATE);
+  expect('0.1.2 upgrade: a thumbnail zip missing from the old cache is imported at the next start (no manual step)', late.has && late.imported && late.n === 3, late);
 } catch (e) { fail.push('crash (reopen): ' + e.message); console.log('CRASH', e); }
 await app.close().catch(() => {});
 expect('no page errors', !errors.length, errors);
