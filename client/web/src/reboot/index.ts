@@ -31,7 +31,18 @@ import { FeedSimulator } from './miinstagram/FeedSimulator';
 import { MIInstagramApp, MIINSTAGRAM_ICON } from './miinstagram/MIInstagramApp';
 import { SettingsStore } from './settings/Settings';
 import { settingsApp } from './settings/SettingsApp';
+import { profileApp } from './people/ProfileApp';
+import { friendsApp } from './people/FriendsApp';
 
+const ico = (paths: string) => `<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">${paths}</svg>`;
+const APP_ICONS = {
+  profile: ico('<circle cx="12" cy="8.5" r="3.6"/><path d="M5 20c.8-3.6 3.6-5.6 7-5.6s6.2 2 7 5.6"/>'),
+  friends: ico('<circle cx="8.5" cy="9" r="3"/><circle cx="16.5" cy="9.5" r="2.5"/><path d="M3 19c.6-3 2.8-4.6 5.5-4.6S13.4 16 14 19M14.5 14.6c2.6-.4 5 .9 5.8 4.4"/>'),
+  plaza: ico('<path d="M4 20h16M6 20v-7M18 20v-7M3 13l9-7 9 7"/><circle cx="12" cy="14.5" r="2"/>'),
+  home: ico('<path d="M4 11.5 12 5l8 6.5V20h-5.5v-5h-5v5H4z"/>'),
+  rooms: ico('<rect x="3.5" y="5" width="7.5" height="14" rx="1.5"/><rect x="13" y="5" width="7.5" height="14" rx="1.5"/><path d="M9 12h.01M15 12h.01"/>'),
+  games: ico('<path d="M7 8h10a4.5 4.5 0 0 1 0 9l-2-2H9l-2 2a4.5 4.5 0 0 1 0-9z"/><path d="M8.5 11v3M7 12.5h3M16 12h.01"/>'),
+};
 const SETTINGS_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3.2"/><path d="M12 2.8v2.6M12 18.6v2.6M2.8 12h2.6M18.6 12h2.6M5.5 5.5l1.8 1.8M16.7 16.7l1.8 1.8M5.5 18.5l1.8-1.8M16.7 7.3l1.8-1.8"/></svg>';
 
 export interface RebootRuntime {
@@ -54,9 +65,11 @@ export function bootReboot(host: RebootHost, opts: { serverUrl?: string | null; 
   const social = flags.on('SOCIAL_LIFE_ENABLED') ? new SocialLife(host, opts.seed) : null;
   // R3: the user's room can be opened as a public room; visitors come from the local service (our server from R10)
   const rooms = flags.on('PUBLIC_ROOMS_ENABLED') ? new PublicRoomController(host, new LocalRoomService({ blocked: () => local.safety().blocked }), { multi, social, seed: opts.seed }) : null;
-  const panel = new RebootPanel(host, flags, multi, rooms);
   // R5: one language table for every new text (stored choice → browser → English)
   const i18n = new I18n({ storage: safeKv() });
+  const panel = new RebootPanel(host, flags, multi, rooms, i18n);
+  // R6: the Miis' chat lines follow the Reboot language (the voice is told which language each line is in)
+  social?.setLanguage(i18n);
   // R6: Reboot settings (one record, applied below once every system exists, then on every change)
   const settings = new SettingsStore(safeKv());
   // R4: Social Hub — a model over R3 (events in, open / close requests out) + its view
@@ -139,7 +152,44 @@ export function bootReboot(host: RebootHost, opts: { serverUrl?: string | null; 
     closePhone: () => phone.forceClose(),
     confirm: () => settings.value.confirm,
   }) : null;
+  // ---- R6: the MiiPhone as the hub of Reboot. Order = home screen order. Shortcuts move for real through the Piazza.
+  const relationsOf = (a: string, b: string) => relations.get(a, b);
+  apps.register({
+    id: 'profile', titleKey: 'app.profile', icon: APP_ICONS.profile, color: 'var(--r-blue)', implemented: true,
+    mount: profileApp({
+      i18n, me: 'host', profile: () => host.profile(), friends, closeness: relationsOf,
+      posts: feed ? () => feed.postsBy('host') : null, photo: (id) => feed?.photo(id) ?? Promise.resolve(null),
+      stats: games ? () => games.stats : null, openApp: (id) => { phone?.launch(id); },
+    }),
+  });
+  /** A move started from the phone: through the Piazza model, with its own errors (already translated). */
+  const move = async (to: string, arg?: string) => {
+    if (!hub) return { ok: false, message: i18n.t('hub.err.UNAVAILABLE') };
+    const r = await hub.go(to, arg);
+    return r.ok || r.code === 'ALREADY_THERE' ? { ok: true } : { ok: false, message: r.message };
+  };
+  apps.register({
+    id: 'friends', titleKey: 'app.friends', icon: APP_ICONS.friends, color: 'var(--r-green)', implemented: true,
+    mount: friendsApp({
+      i18n, me: 'host', friends, closeness: relationsOf,
+      places: places && visit ? { whereIs: (id) => places.whereIs(id), refusalOf: (id) => places.refusalOf(id), current: () => places.current, subscribe: (cb) => places.subscribe(() => cb()) } : null,
+      go: async (placeId) => {
+        const r = await move(placeId === GAMES_ID ? 'games' : 'friends', placeId === GAMES_ID ? undefined : placeId);
+        if (r.ok && phone?.phase === 'open') phone.close();
+        return r;
+      },
+    }),
+  });
   if (miinstagram) apps.register({ id: 'miinstagram', titleKey: 'app.miinstagram', icon: MIINSTAGRAM_ICON, color: 'linear-gradient(150deg, var(--r-pink), var(--r-accent-hi))', implemented: true, badge: () => (settings.value.notifications ? miinstagram.unseen : 0), mount: (el) => { void friends(); return miinstagram.mount(el); } });
+  if (hub) {
+    apps.register({ id: 'plaza', titleKey: 'app.plaza', icon: APP_ICONS.plaza, color: 'var(--r-accent)', implemented: true, action: () => move('hub') });
+    apps.register({ id: 'house', titleKey: 'app.home', icon: APP_ICONS.home, color: '#b5651d', implemented: true, action: () => move('home') });
+    if (wantFriends && places && hubScreen) apps.register({
+      id: 'rooms', titleKey: 'app.rooms', icon: APP_ICONS.rooms, color: 'var(--r-pink)', implemented: true,
+      action: async () => { if (hub.at !== 'hub') { const r = await move('hub'); if (!r.ok) return r; } void places.refresh(); hubScreen.openPanel('friends'); return { ok: true }; },
+    });
+    if (games) apps.register({ id: 'games', titleKey: 'app.games', icon: APP_ICONS.games, color: 'var(--r-purple)', implemented: true, action: () => move('games') });
+  }
   apps.register({
     id: 'settings', titleKey: 'app.settings', icon: SETTINGS_ICON, color: 'var(--r-ink-3)', implemented: true,
     mount: settingsApp(settings, i18n, { name: () => host.profile().name, rename: (n) => host.setPlayerName(n) }),

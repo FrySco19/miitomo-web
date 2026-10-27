@@ -1,0 +1,29 @@
+/* REBOOT R6 — My page + Friends (MiiPhone apps) on the design tokens. */
+.pp-tabs { position: sticky; top: 0; z-index: 1; }
+.pp-body { display: grid; gap: var(--r-s3); }
+.pp-me { display: grid; justify-items: center; gap: var(--r-s2); padding: var(--r-s4); }
+.pp-name { margin: 0; font-size: var(--r-fs-xl); color: var(--r-ink); }
+.pp-facts { margin: 0; width: 100%; display: grid; gap: var(--r-s1); }
+.pp-facts > div { display: flex; justify-content: space-between; gap: var(--r-s3); padding: var(--r-s2) var(--r-s1); border-top: 1px solid var(--r-line); font-size: var(--r-fs-sm); }
+.pp-facts dt { color: var(--r-ink-3); }
+.pp-facts dd { margin: 0; color: var(--r-ink); text-align: right; overflow-wrap: anywhere; }
+.pp-facts em { color: var(--r-ink-3); font-style: normal; }
+.pp-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(64px, 1fr)); gap: var(--r-s2); }
+.pp-stat { display: grid; justify-items: center; gap: 2px; padding: var(--r-s2) var(--r-s1); border-radius: var(--r-r-md); background: var(--r-surface); box-shadow: var(--r-shadow-key); }
+.pp-stat b { font-size: var(--r-fs-xl); color: var(--r-accent); font-variant-numeric: tabular-nums; }
+.pp-stat span { font-size: var(--r-fs-xs); color: var(--r-ink-2); }
+.pp-badges { display: flex; flex-wrap: wrap; gap: var(--r-s1); }
+.pp-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; }
+.pp-tile { aspect-ratio: 1; border: 0; border-radius: var(--r-r-sm); background: var(--r-surface-3) center / cover no-repeat; cursor: pointer; padding: 6px; font: inherit; }
+.pp-tile.txt { background: var(--r-accent-soft); color: var(--r-ink-2); font-size: var(--r-fs-xs); line-height: 1.25; display: grid; place-items: center; overflow: hidden; }
+.pp-tile.txt span { display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
+.r-chip.lv0 { background: var(--r-surface-3); color: var(--r-ink-2); }
+.r-chip.lv1 { background: var(--r-blue-soft); color: var(--r-blue); }
+.r-chip.lv2 { background: var(--r-purple-soft); color: var(--r-purple); }
+.r-chip.lv3 { background: var(--r-pink-soft); color: var(--r-pink); }
+.fa-row { align-items: center; }
+.fa-lv { display: flex; align-items: center; gap: var(--r-s2); margin-top: 2px; }
+.fa-bar { flex: 1; height: 6px; border-radius: 3px; background: var(--r-surface-3); overflow: hidden; }
+.fa-bar i { display: block; height: 100%; border-radius: inherit; background: var(--r-accent-hi); transition: width var(--r-slow) var(--r-ease); }
+.fa-why { color: var(--r-danger); }
+.fa .r-msg:empty, .pp .r-msg:empty { display: none; }

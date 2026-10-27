@@ -25,13 +25,14 @@ export interface AppDefinition {
    * R6: a SHORTCUT instead of a screen (Piazza, Casa, Giochi…): runs a real navigation and closes the phone. Returns
    * false (with an i18n error key) when the move is not possible right now; the phone stays as it was.
    */
-  action?(): Promise<{ ok: boolean; error?: string }>;
+  action?(): Promise<{ ok: boolean; error?: string; message?: string }>;
   /** Number shown on the icon (new posts, invitations…); 0 = none. */
   badge?(): number;
 }
 export type PhonePhase = 'closed' | 'opening' | 'open' | 'closing';
 export type PhoneError = 'APP_UNAVAILABLE' | 'ALREADY_OPEN' | 'ALREADY_CLOSED' | 'BUSY' | 'HIDDEN';
-export type PhoneEvent = { type: 'state'; phase: PhonePhase; app: string } | { type: 'error'; code: PhoneError; info?: string };
+/** `info` = an i18n key (or the app id); `message` = an already translated reason (e.g. from the Piazza). */
+export type PhoneEvent = { type: 'state'; phase: PhonePhase; app: string } | { type: 'error'; code: PhoneError; info?: string; message?: string };
 
 export class MiiPhoneApps {
   private defs = new Map<string, AppDefinition>();
@@ -98,7 +99,7 @@ export class MiiPhone {
     this.running = true;
     try {
       const r = await def.action!();
-      if (!r.ok) { this.counters.refused++; this.emit({ type: 'error', code: 'APP_UNAVAILABLE', info: r.error }); return; }
+      if (!r.ok) { this.counters.refused++; this.emit({ type: 'error', code: 'APP_UNAVAILABLE', info: r.error, message: r.message }); return; }
       if (this.phase === 'open') this.close();
     } finally { this.running = false; }
   }

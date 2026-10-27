@@ -50,7 +50,8 @@ export class FakeHost implements RebootHost {
   face(id: string, x: number, z: number) { const m = this.m(id); if (!m || m.state !== 'idle') return Promise.resolve(false); m.heading = Math.atan2(x - m.x, z - m.z); return Promise.resolve(true); }
   interact(id: string, o: string) { const m = this.m(id); if (!m || m.state !== 'idle') return false; m.state = 'interacting'; m.busy = 3; void o; return true; }
   wave(id: string) { const m = this.m(id); if (!m || m.state !== 'idle') return false; m.state = 'reacting'; m.busy = 1.5; this.waves.push(id); return true; }
-  say(id: string, text: string) { if (this.balloon) return Promise.resolve('busy' as const); this.balloon = id; this.says.push(`${id}:${text}`); for (const l of this.speech) l({ speaker: id }); return new Promise<'done'>((res) => setTimeout(() => { this.balloon = null; res('done'); }, 0)); }
+  sayLangs: (string | undefined)[] = [];
+  say(id: string, text: string, _sec?: number, lang?: string) { if (this.balloon) return Promise.resolve('busy' as const); this.balloon = id; this.says.push(`${id}:${text}`); this.sayLangs.push(lang); for (const l of this.speech) l({ speaker: id }); return new Promise<'done'>((res) => setTimeout(() => { this.balloon = null; res('done'); }, 0)); }
   balloonBusy() { return !!this.balloon; }
   setGuestWander() { /* social life plans the walks */ }
   onTick(cb: (dt: number) => void) { this.ticks.add(cb); return () => this.ticks.delete(cb); }

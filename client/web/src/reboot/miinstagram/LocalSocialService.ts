@@ -95,6 +95,8 @@ export class LocalSocialService implements SocialFeedService {
     const items = this.posts.slice(start, start + limit).map((p) => structuredClone(p));
     return ok({ items, next: start + limit < this.posts.length ? items[items.length - 1].id : null });
   }
+  /** R6 (My page): the posts of one author, newest first (copies). */
+  postsBy(author: string, limit = 30) { return this.posts.filter((p) => p.authorId === author).slice(0, limit).map((p) => structuredClone(p)); }
   async get(id: string) { const p = this.posts.find((x) => x.id === id); return p ? ok(structuredClone(p)) : no('NOT_FOUND'); }
   async photo(photoId: string) { return ID_RE.test(photoId) ? this.photos.get(photoId) : null; }
 

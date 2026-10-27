@@ -50,7 +50,7 @@ export class MiiPhoneView {
     if (!ok && this.phone.phase !== 'closed') this.phone.forceClose();
   }
   private onPhone(e: PhoneEvent) {
-    if (e.type === 'error') { this.toast(e.info && this.i18n.has(e.info) ? this.i18n.t(e.info) : this.i18n.t(`phone.err.${e.code}`)); return; }
+    if (e.type === 'error') { this.toast(e.message || (e.info && this.i18n.has(e.info) ? this.i18n.t(e.info) : this.i18n.t(`phone.err.${e.code}`))); return; }
     clearTimeout(this.settleTimer);
     if (e.phase === 'opening' || e.phase === 'closing') {
       // animations end with `animationend`; with reduced motion (or a hidden tab) the transition completes anyway

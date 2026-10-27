@@ -123,6 +123,27 @@ export class LocalPlacesService {
   // ------------------------------------------------------------------ read
   get(id: Id): RoomInstance | null { const p = this.places.get(id); return p && !p.removed ? p.room : null; }
   place(id: Id) { const p = this.places.get(id); return p && !p.removed ? { id: p.id, kind: p.kind, owner: p.owner, skin: p.skin, activity: p.activity } : null; }
+  /**
+   * R6 (Friends app): where a local friend is right now, as the places know it. `placeId` is the place to go to be
+   * with them (null = nowhere you can go). Reading only: nothing changes.
+   *   home     their own room is open (they are in it)        room     visiting another friend's room
+   *   games    in the Sala Giochi                             private  their room is private, they are not out
+   *   out      their room is closed and they are not in any place     unknown  the places were not built yet
+   */
+  whereIs(friendId: Id): { at: 'home' | 'room' | 'games' | 'private' | 'out' | 'unknown'; placeId: Id | null; ownerName: string } {
+    if (!this.places.size) return { at: 'unknown', placeId: null, ownerName: '' };
+    for (const p of this.places.values()) {
+      if (p.removed || !p.room.has(friendId)) continue;
+      if (p.kind === 'games') return { at: 'games', placeId: p.id, ownerName: '' };
+      if (p.room.ownerId === friendId) return { at: 'home', placeId: p.id, ownerName: p.owner?.name ?? '' };
+      return { at: 'room', placeId: p.id, ownerName: p.owner?.name ?? '' };
+    }
+    const own = this.places.get('room:' + friendId);
+    if (!own || own.removed) return { at: 'unknown', placeId: null, ownerName: '' };
+    return { at: own.status === 'private' ? 'private' : 'out', placeId: null, ownerName: '' };
+  }
+  /** Why the user cannot go into a place now (null = they can, or they are already there). */
+  refusalOf(placeId: Id): PlaceError | null { const p = this.places.get(placeId); return !p ? 'NOT_FOUND' : p.room.has(OWNER) ? null : this.refusal(p); }
   /** Where the user is (null = not in any of these places). */
   get current(): Id | null { for (const p of this.places.values()) if (!p.removed && p.room.has(OWNER)) return p.id; return null; }
   list(kind?: PlaceKind): PlaceView[] {
