@@ -21,6 +21,10 @@ The repository holds two clearly separated experiences:
 | Start | `avvia-miitomo-web.bat` or `?reboot=0` | `avvia-miitomo-reboot.bat` or `?reboot=1` |
 | Status | Playable core loop; see [ORIGINAL-PORT-STATUS](docs/ORIGINAL-PORT-STATUS.md) | Phases R1–R4 done, R5 next; see [ROADMAP](docs/reboot/ROADMAP.md) |
 
+**▶ Web preview: [frysco19.github.io/miitomo-web](https://frysco19.github.io/miitomo-web/)**. It hosts the code only:
+on the first visit you import your own Miitomo files, which stay in your browser for the next visits. Add
+`?reboot=1` to the address to open Reboot.
+
 > [!IMPORTANT]
 > This is a preservation and research project. It is **not affiliated with, endorsed by or connected to Nintendo**.
 > It never contacts Nintendo servers, has no online play and no real-money purchases.
