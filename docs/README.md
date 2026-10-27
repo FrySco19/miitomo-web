@@ -9,6 +9,12 @@
 | [reboot/ROADMAP.md](reboot/ROADMAP.md) | Miitomo Reboot phases R0–R12 and what each finished phase delivered |
 | [reboot/CLASSIC-VS-REBOOT.md](reboot/CLASSIC-VS-REBOOT.md) | Which features are original and which are new |
 
+## Desktop app
+
+| Document | What it covers |
+|---|---|
+| [desktop/DESKTOP.md](desktop/DESKTOP.md) | The Windows .exe: accounts, launcher, peer-to-peer friends (security model, limits, build, tests) |
+
 ## Architecture
 
 | Document | What it covers |

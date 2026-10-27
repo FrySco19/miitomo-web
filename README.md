@@ -131,13 +131,25 @@ in `local-assets/cdn/`) and double-click:
 They start `tools/serve-local.ps1`, a small server bound to `localhost` that serves the build and, read-only, only
 your own asset files. Nothing leaves your computer.
 
+### Desktop app (Windows .exe)
+
+One program for both modes: sign up or log in (local accounts), a launcher with your Mii and the original music
+from **your own files**, the choice Classic / Reboot, and friends **peer-to-peer** (LAN discovery and invite codes,
+no server). The `.exe` contains no Nintendo files. Build it with:
+
+```bash
+(cd client/web && npm ci && npm run build) && cd desktop && npm ci && npx electron-builder --win portable --x64
+```
+
+Details, security model and limits: [docs/desktop/DESKTOP.md](docs/desktop/DESKTOP.md).
+
 ## Testing
 
 Unit tests that need no game files; these run in CI on every push:
 
 ```bash
 cd client/web
-for t in bodyscale framing personality reboot social rooms hub i18n friendrooms gameroom miiphone miinstagram; do npx tsx ../../tests/unit/$t.test.mts; done
+for t in bodyscale framing personality reboot social rooms hub i18n friendrooms gameroom miiphone miinstagram settings people economy p2p p2pfeed; do npx tsx ../../tests/unit/$t.test.mts; done
 ```
 
 End-to-end tests drive the real build in headless Chromium with Playwright. They need your own game files, so they
@@ -166,7 +178,10 @@ client/web/            browser client (Vite + TypeScript + three.js)
   src/agx/             original shader material
   src/body/ room/ play/ social/ voice/ effects/   Classic engine and game
   src/reboot/          Miitomo Reboot (loaded only behind the gate)
+  src/launcher/ src/p2p/   desktop app: launcher, peer-to-peer engine and client
+desktop/               desktop app (Electron): accounts, LAN discovery, packaging
 tests/unit/            unit tests (tsx)
+tests/desktop/         desktop app tests (accounts, two-instance end-to-end)
 tests/e2e/             end-to-end tests (Playwright, need your own files)
 tools/                 local server and research scripts (Python, PowerShell)
 docs/                  status, classification, reverse engineering, Reboot design

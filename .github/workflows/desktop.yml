@@ -1,0 +1,50 @@
+name: Desktop app
+
+# Builds the Windows .exe (portable, one file) of the desktop app and runs its end-to-end test.
+# Manual (Actions → Desktop app → Run workflow) or on a tag desktop-v*. The .exe is an artifact of the run.
+# It contains the app and the web client only: no Miitomo / Nintendo files (the user points it to their own).
+on:
+  workflow_dispatch:
+  push:
+    tags: ['desktop-v*']
+
+permissions:
+  contents: read
+
+jobs:
+  e2e-linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
+      - name: Build the web client
+        working-directory: client/web
+        run: npm ci && npm run build
+      - name: Install the desktop app
+        working-directory: desktop
+        run: npm ci
+      - name: Desktop end-to-end (two instances, accounts, launcher, P2P over LAN and invite codes)
+        run: |
+          npm i --no-save playwright@1.49.1
+          xvfb-run -a node tests/desktop/desktop.e2e.mjs
+  windows-exe:
+    runs-on: windows-latest
+    needs: e2e-linux
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
+      - name: Build the web client
+        working-directory: client/web
+        run: npm ci && npm run build
+      - name: Build the portable .exe
+        working-directory: desktop
+        run: |
+          npm ci
+          npx electron-builder --win portable --x64 -c.win.signAndEditExecutable=true
+      - uses: actions/upload-artifact@v4
+        with:
+          name: MiitomoWeb-windows-portable
+          path: desktop/release/*.exe
+          if-no-files-found: error

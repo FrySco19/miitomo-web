@@ -55,6 +55,8 @@ Every feature belongs to exactly one of these classes:
 | Guest placed inside without the door, `visitPlace`, object policy, room snapshot, Miifoto share hook (R5) | SHARED INFRASTRUCTURE | Off in Classic (never called / null) |
 | Design system, Settings, My page, Friends, MiiPhone shortcuts (R6.0a) | REBOOT | `reboot/ui/`, `reboot/settings/`, `reboot/people/`. Volumes / quality / player name reach the engine through `RebootHost` (Classic never calls them) |
 | Coins and the Reboot shop (R6.0b) | REBOOT (new economy, no real money) | `reboot/economy/`, `reboot/shop/`. The Classic shop stays a catalogue: Miitomo's prices were server data |
+| Desktop app: local accounts, launcher, peer-to-peer friends (2026-10-27) | NEW (desktop shell) | `desktop/`, `client/web/src/launcher/`, `client/web/src/p2p/`. In Classic, P2P friends join the friends list with their own Mii (the original friends were on Nintendo's server). Off in a plain browser |
+| MIInstagram between real P2P friends | REBOOT | `reboot/miinstagram/P2PFeedSync.ts`. The simulated Miis never act in a real friend's name |
 | Minigames, MiniGameEngine (R6–R7) | REBOOT | Miitomo Drop 2.0 = new; original Miitomo Drop stays CLASSIC (prizes SERVER DATA MISSING) |
 | Events, rewards (R8) | REBOOT | No currency |
 | Notifications (R9) | REBOOT, SERVER REQUIRED for remote ones | |
