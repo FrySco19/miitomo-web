@@ -1,0 +1,28 @@
+/* REBOOT R4 Social Hub ("Piazza") — Miitomo grammar: soft cream, white rounded cards, orange accents. */
+.hub-pill { pointer-events: auto; position: absolute; left: calc(max(14px, env(safe-area-inset-left)) + 112px); top: max(14px, env(safe-area-inset-top)); display: inline-flex; align-items: center; gap: 7px; border: 0; border-radius: 999px; padding: 8px 14px 8px 10px; background: #ff7a2f; color: #fff; font: inherit; font-family: var(--pl-font, inherit); font-size: 13px; font-weight: 700; box-shadow: 0 4px 0 #c94a14, 0 8px 20px rgba(0,0,0,.12); cursor: pointer; z-index: 6; }
+.hub-pill:hover { filter: brightness(1.05); }
+.hub-pin { width: 10px; height: 10px; border-radius: 50% 50% 50% 0; transform: rotate(-45deg); background: #fff; }
+.hub-chip { background: rgba(255,255,255,.25); border-radius: 999px; padding: 2px 8px; font-size: 11px; }
+.hub-screen { pointer-events: auto; position: fixed; inset: 0; z-index: 60; overflow: auto; background: radial-gradient(120% 90% at 50% 0%, #fff6ea 0%, #ffe9d2 55%, #ffd9b8 100%); color: #3b3530; font-family: var(--pl-font, inherit); padding-block: max(28px, env(safe-area-inset-top)) 28px; padding-left: max(16px, env(safe-area-inset-left)); padding-right: max(16px, env(safe-area-inset-right)); box-sizing: border-box; }
+.hub-inner { max-width: 760px; margin: 0 auto; display: grid; gap: 14px; }
+.hub-screen header { text-align: center; display: grid; gap: 4px; justify-items: center; }
+.hub-screen h1 { margin: 0; font-size: 38px; letter-spacing: .01em; color: #e8541c; text-wrap: balance; }
+.hub-screen h2 { margin: 10px 0 0; font-size: 14px; letter-spacing: .06em; text-transform: uppercase; color: #9a7a62; }
+.hub-sub { margin: 0; color: #7a6f66; font-size: 14px; }
+.hub-badge { margin: 0; font-size: 11px; font-weight: 700; letter-spacing: .04em; color: #fff; background: #e8541c; border-radius: 999px; padding: 3px 10px; }
+.hub-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; }
+.hub-card { display: flex; align-items: center; gap: 14px; text-align: left; border: 0; border-radius: 22px; padding: 16px 18px; background: #fff; color: inherit; font: inherit; cursor: pointer; box-shadow: 0 5px 0 rgba(120,70,30,.14), 0 12px 26px rgba(120,70,30,.12); min-width: 0; transition: transform .12s; }
+.hub-card:not(:disabled):hover { transform: translateY(-2px); }
+.hub-card:disabled { cursor: default; }
+.hub-card.current { outline: 3px solid #ff7a2f; }
+.hub-card.k-future { background: rgba(255,255,255,.55); box-shadow: none; border: 2px dashed #e6c9ae; }
+.hub-card.k-future .hub-ico { background: #e6d6c8; }
+.hub-ico { flex: none; width: 52px; height: 52px; border-radius: 16px; background: #ff7a2f; display: grid; place-items: center; }
+.hub-card.k-public .hub-ico { background: #2aa5c9; }
+.hub-ico svg { width: 30px; height: 30px; fill: #fff; }
+.hub-txt { display: grid; gap: 3px; min-width: 0; }
+.hub-txt b { font-size: 17px; }
+.hub-txt small { font-size: 13px; color: #7a6f66; }
+.hub-txt em { font-style: normal; font-size: 12px; color: #b0623a; }
+.hub-soon { margin-left: auto; font-size: 11px; font-weight: 700; color: #9a7a62; background: #f4e6d8; border-radius: 999px; padding: 3px 8px; white-space: nowrap; }
+.hub-nav { min-height: 1.2em; margin: 6px 0 0; text-align: center; font-size: 13px; color: #b0623a; }

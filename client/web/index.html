@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Miitomo Web · Mii Lab</title>
+  <meta name="description" content="Miitomo Web/PC reconstruction — M5 full Mii (original body + AFL head) research build" />
+  <script src="./ffl/ffl-emscripten.js"></script>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-dot" aria-hidden="true"></span>
+      <span class="brand-name">Miitomo Web</span>
+      <span class="brand-sub">Mii Lab</span>
+    </div>
+    <div class="build-tag" title="Stato reale di questa build">M8 · ricerca · loop della stanza</div>
+  </header>
+
+  <main class="layout">
+    <aside class="panel panel-left" aria-label="Risorse e dati Mii">
+      <section class="card">
+        <h2>Asset originali</h2>
+        <p class="hint">Seleziona i tuoi file: APK di Miitomo 2.4.0, <code>AFLResHigh_2_3.dat</code> (o il suo zip) e gli zip del CDN (<code>asset_env*.zip</code>, animazioni). Restano in questo browser.</p>
+        <label class="drop" id="drop">
+          <input type="file" id="resFile" accept=".dat,.zip,.apk" multiple hidden />
+          <span class="drop-title">Scegli o trascina i file</span>
+          <span class="drop-sub">.apk · .zip · .dat</span>
+        </label>
+        <ul class="checklist" id="checklist" aria-live="polite"></ul>
+        <p class="hint" id="importMsg" role="status"></p>
+        <button class="btn ghost small" id="forgetRes" hidden>Dimentica i file salvati</button>
+      </section>
+
+      <section class="card">
+        <h2>Mii</h2>
+        <div class="btn-row">
+          <button class="btn primary" id="randomBtn" disabled>Mii casuale</button>
+        </div>
+        <div class="seg" role="radiogroup" aria-label="Genere del Mii casuale" id="genderSeg">
+          <button role="radio" aria-checked="true" data-v="2">Tutti</button>
+          <button role="radio" aria-checked="false" data-v="0">Maschio</button>
+          <button role="radio" aria-checked="false" data-v="1">Femmina</button>
+        </div>
+        <label class="field">
+          <span>Dati Mii (hex o Base64)</span>
+          <textarea id="miiData" rows="3" spellcheck="false" placeholder="StoreData 3DS/Wii U, codice Mii Studio…"></textarea>
+        </label>
+        <button class="btn" id="loadDataBtn" disabled>Carica dati</button>
+        <p class="error" id="miiError" role="alert" hidden></p>
+      </section>
+
+      <section class="card">
+        <h2>Proporzioni</h2>
+        <label class="check"><input type="checkbox" id="scaleOn" checked /> Scala corporea del gioco (dal binario)</label>
+        <label class="field range"><span>Altezza <output id="heightVal">64</output></span><input type="range" id="heightIn" min="0" max="127" value="64" /></label>
+        <label class="field range"><span>Corporatura <output id="buildVal">64</output></span><input type="range" id="buildIn" min="0" max="127" value="64" /></label>
+        <button class="btn ghost small" id="miiProps">Valori del Mii</button>
+      </section>
+
+      <section class="card">
+        <h2>Guardaroba</h2>
+        <div class="seg" role="radiogroup" aria-label="Vestiti" id="dressSeg">
+          <button role="radio" aria-checked="true" data-v="outfit">Outfit</button>
+          <button role="radio" aria-checked="false" data-v="preset">Outfit originale #1</button>
+          <button role="radio" aria-checked="false" data-v="m5">bodyAll0400</button>
+        </div>
+        <div class="wardrobe" id="wardrobe"></div>
+        <label class="check"><input type="checkbox" id="tuck" /> Maglia dentro i pantaloni</label>
+        <p class="hint">Importa gli zip <code>asset_model_character_*</code> e <code>asset_model_colorlist_*</code> del CDN: restano in questo browser.</p>
+      </section>
+    </aside>
+
+    <section class="stage" aria-label="Vista 3D">
+      <canvas id="view"></canvas>
+      <div class="ab-labels" id="abLabels" hidden><span>A · approssimato</span><span>B · originale APK</span></div>
+      <img class="ref-img" id="refImg" alt="Render di riferimento generato da Miitomo (capture2/bodyAll0400_00.webp)" hidden />
+      <div class="stage-empty" id="stageEmpty">
+        <div class="empty-face" aria-hidden="true"></div>
+        <p>Importa gli asset originali per iniziare</p>
+      </div>
+      <div class="stage-hud">
+        <span id="hudInfo"></span>
+        <span class="hud-keys">trascina per ruotare · rotellina per zoom · R ripristina · Spazio Mii casuale</span>
+      </div>
+    </section>
+
+    <aside class="panel panel-right" aria-label="Vista, posa, shader ed espressione">
+      <section class="card">
+        <h2>Scena</h2>
+        <div class="seg" role="radiogroup" aria-label="Scena" id="sceneSeg">
+          <button role="radio" aria-checked="true" data-v="lab">Mii Lab</button>
+          <button role="radio" aria-checked="false" data-v="room">Stanza</button>
+        </div>
+      </section>
+
+      <section class="card" id="roomCard" hidden>
+        <h2>Stanza</h2>
+        <div class="seg" role="radiogroup" aria-label="Camera della stanza" id="roomCamSeg">
+          <button role="radio" aria-checked="true" data-v="original">Originale</button>
+          <button role="radio" aria-checked="false" data-v="follow">Segui</button>
+          <button role="radio" aria-checked="false" data-v="free">Libera</button>
+        </div>
+        <div class="wr-row">
+          <label class="field"><span>Parete</span><select id="roomWall"></select></label>
+          <label class="field"><span>Variante</span><select id="roomVariant"></select></label>
+        </div>
+        <label class="field"><span>Pavimento</span><select id="roomFloor"></select></label>
+        <div class="btn-row">
+          <button class="btn" id="roomEnterExit">Entra / esci</button>
+          <button class="btn ghost" id="roomWave">Saluta</button>
+          <button class="btn ghost" id="roomAppear">Appari</button>
+        </div>
+        <div class="btn-row">
+          <button class="btn ghost small" id="roomAudio" aria-pressed="true">Audio attivo</button>
+          <label class="check"><input type="checkbox" id="roomObjects" checked /> Oggetti interattivi</label>
+        </div>
+        <p class="hint">Clic sul Mii: reazione e menu · clic su un oggetto segnato: il Mii lo usa · clic sul pavimento: cammina · porta: esce o entra. Tastiera: frecce/WASD, E porta, Spazio saluto, Invio avanti, Esc chiudi.</p>
+      </section>
+
+      <section class="card">
+        <h2>Vista</h2>
+        <div class="seg" role="radiogroup" aria-label="Cosa mostrare" id="viewSeg">
+          <button role="radio" aria-checked="true" data-v="full">Mii completo</button>
+          <button role="radio" aria-checked="false" data-v="head">Solo testa</button>
+        </div>
+        <label class="field"><span>Posa</span><select id="poseSel"><option value="">Bind (T-pose del file)</option></select></label>
+        <label class="check"><input type="checkbox" id="autoRotate" checked /> Rotazione automatica</label>
+        <label class="check"><input type="checkbox" id="showRef" /> Mostra riferimento del gioco</label>
+      </section>
+
+      <section class="card">
+        <h2>Shader</h2>
+        <div class="seg" role="radiogroup" aria-label="Shader" id="shaderSeg">
+          <button role="radio" aria-checked="true" data-v="original">Originale</button>
+          <button role="radio" aria-checked="false" data-v="approx">Approssimato</button>
+          <button role="radio" aria-checked="false" data-v="ab">A | B</button>
+        </div>
+        <p class="hint" id="shaderNote"></p>
+        <button class="btn ghost" id="shotBtn" disabled>Salva PNG</button>
+      </section>
+
+      <section class="card">
+        <h2>Espressione</h2>
+        <label class="field">
+          <span>Filtro</span>
+          <select id="exprGroup">
+            <option value="all">Tutte (70)</option>
+            <option value="ffl">Wii U / 3DS (0–18)</option>
+            <option value="afl">Esclusive Miitomo (19–69)</option>
+          </select>
+        </label>
+        <div class="expr-grid" id="exprGrid" role="listbox" aria-label="Espressioni"></div>
+      </section>
+
+      <section class="card">
+        <h2>Diagnostica</h2>
+        <dl class="kv" id="diag"></dl>
+      </section>
+    </aside>
+  </main>
+  <script type="module" src="/src/main.ts"></script>
+</body>
+</html>

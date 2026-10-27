@@ -1,0 +1,81 @@
+# ------------------------------------------------------------------
+# Never commit proprietary Nintendo material. The game runs only on
+# files the user owns and imports locally (see README → Your own files).
+# ------------------------------------------------------------------
+*.apk
+*.ipa
+*.xapk
+*.dat
+*.pod
+*.pvr
+*.ccz
+*.msbt
+*.msbp
+*.ccbi
+*.ptcl
+*.wav
+*.mp3
+*.ogg
+*.raw
+*.otf
+*.ttf
+/*.zip
+asset_*.zip
+asset_model_character_*.zip
+/extracted/
+/work/
+/local-assets/
+/reference/
+cdx
+manifest.json
+
+# Research material derived from the APK / CDN (kept locally, not published)
+/reference-metadata/
+/docs/reverse-engineering/evidence/
+/docs/research/data/
+/tools/asset-extraction/cdn-fetch.ps1
+/tools/asset-extraction/selections/
+
+# Build output and dependencies
+node_modules/
+dist/
+client/web/public/ffl/
+*.tsbuildinfo
+.vite/
+
+# Local staging, backups and test output
+.stage/
+*.bak
+*.bak-*
+*.orig
+test-results/
+playwright-report/
+coverage/
+*.log
+npm-debug.log*
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Secrets and local configuration
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.keystore
+*.jks
+npf.json
+
+# OS / editors
+.DS_Store
+Thumbs.db
+desktop.ini
+.idea/
+.vscode/
+*.swp
+*~

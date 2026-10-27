@@ -1,0 +1,36 @@
+name: Feature request
+description: Suggest an improvement or a new feature
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        New features belong to **Miitomo Reboot**. The original port only rebuilds what existed in Miitomo 2.4.0, from the user's own files.
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Original port (something Miitomo 2.4.0 had)
+        - Miitomo Reboot (new feature)
+        - Documentation
+        - Tooling or tests
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem does it solve?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposal
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Evidence (original port only)
+      description: Where the feature appears in the original files (scene, layout, text label, address). Leave empty for Reboot.
