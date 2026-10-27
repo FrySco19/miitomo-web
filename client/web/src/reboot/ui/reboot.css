@@ -1,34 +1,36 @@
-/* REBOOT layer — Miitomo visual grammar (soft white sheets, orange, rounded), always marked as new. */
-.rbt-layer { position: absolute; inset: 0; pointer-events: none; z-index: 5; font-family: var(--pl-font, inherit); }
-.rbt-pill { pointer-events: auto; position: absolute; left: max(14px, env(safe-area-inset-left)); top: max(14px, env(safe-area-inset-top)); display: inline-flex; align-items: center; gap: 7px; border: 0; border-radius: 999px; padding: 8px 14px 8px 10px; background: #fff; color: #e8541c; font: inherit; font-size: 13px; font-weight: 700; box-shadow: 0 4px 0 rgba(40,60,90,.12), 0 8px 20px rgba(0,0,0,.12); cursor: pointer; }
-.rbt-pill:hover { background: #fff1df; }
-.rbt-dot { width: 10px; height: 10px; border-radius: 50%; background: linear-gradient(135deg, #ff8a3d, #e8541c); box-shadow: 0 0 0 3px #ffe2cc; }
-.rbt-sheet { pointer-events: auto; position: absolute; left: max(14px, env(safe-area-inset-left)); top: 62px; width: min(360px, calc(100% - 28px)); max-height: calc(100% - 170px); overflow: auto; background: rgba(255,255,255,.97); color: #3b3530; border-radius: 22px; padding: 14px 16px 12px; box-shadow: 0 6px 0 rgba(40,60,90,.12), 0 14px 34px rgba(0,0,0,.18); box-sizing: border-box; }
+/* REBOOT layer (R1–R3 panel) on the R6 design tokens — always marked as new. */
+.rbt-layer { position: absolute; inset: 0; pointer-events: none; z-index: 5; font-family: var(--r-font); color: var(--r-ink); }
+.rbt-pill { pointer-events: auto; position: absolute; left: max(14px, env(safe-area-inset-left)); top: max(14px, env(safe-area-inset-top)); display: inline-flex; align-items: center; gap: 7px; border: 0; border-radius: var(--r-r-pill); padding: 8px 14px 8px 10px; background: var(--r-surface); color: var(--r-accent); font: inherit; font-size: 13px; font-weight: var(--r-fw); box-shadow: var(--r-shadow-float); cursor: pointer; transition: transform var(--r-fast) var(--r-ease); }
+.rbt-pill:hover { transform: translateY(-1px); background: var(--r-accent-soft); }
+.rbt-dot { width: 10px; height: 10px; border-radius: 50%; background: linear-gradient(135deg, var(--r-accent-hi), var(--r-accent)); box-shadow: 0 0 0 3px var(--r-cream-3); }
+.rbt-sheet { pointer-events: auto; position: absolute; left: max(14px, env(safe-area-inset-left)); top: 62px; width: min(360px, calc(100% - 28px)); max-height: calc(100% - 170px); overflow: auto; background: rgba(255,255,255,.97); color: var(--r-ink); border-radius: var(--r-r-xl); padding: var(--r-s3) var(--r-s4); box-shadow: var(--r-shadow-float); box-sizing: border-box; animation: rbt-in var(--r-med) var(--r-ease-pop) both; }
+@keyframes rbt-in { from { opacity: 0; transform: translateY(-6px) scale(.98); } to { opacity: 1; transform: none; } }
 .rbt-sheet header { display: flex; align-items: center; justify-content: space-between; }
 .rbt-sheet h2 { margin: 0; font-size: 18px; }
-.rbt-sheet h3 { margin: 14px 0 6px; font-size: 14px; display: flex; align-items: center; gap: 8px; }
-.rbt-close { border: 0; background: #f4ece4; width: 30px; height: 30px; border-radius: 50%; font-size: 18px; cursor: pointer; color: #3b3530; }
-.rbt-badge { margin: 6px 0 0; display: inline-block; font-size: 11px; font-weight: 700; letter-spacing: .03em; color: #fff; background: #e8541c; border-radius: 999px; padding: 3px 9px; }
-.rbt-count { font-size: 12px; font-weight: 700; color: #e8541c; background: #fff1df; border-radius: 999px; padding: 2px 8px; }
-.rbt-stepper { display: flex; align-items: center; gap: 8px; font-size: 12px; color: #7a6f66; }
-.rbt-stepper button { width: 32px; height: 32px; border-radius: 50%; border: 0; background: #ff7a2f; color: #fff; font-size: 18px; font-weight: 700; cursor: pointer; box-shadow: 0 3px 0 #c94a14; }
+.rbt-sheet h3 { margin: var(--r-s3) 0 6px; font-size: var(--r-fs-md); display: flex; align-items: center; gap: var(--r-s2); }
+.rbt-close { border: 0; background: var(--r-surface-3); width: 32px; height: 32px; border-radius: 50%; font-size: 18px; cursor: pointer; color: var(--r-ink); }
+.rbt-badge { margin: 6px 0 0; display: inline-block; font-size: var(--r-fs-xs); font-weight: var(--r-fw); letter-spacing: .03em; color: #fff; background: var(--r-accent); border-radius: var(--r-r-pill); padding: 3px 9px; }
+.rbt-count { font-size: 12px; font-weight: var(--r-fw); color: var(--r-accent); background: var(--r-accent-soft); border-radius: var(--r-r-pill); padding: 2px 8px; }
+.rbt-stepper { display: flex; align-items: center; gap: var(--r-s2); font-size: 12px; color: var(--r-ink-2); }
+.rbt-stepper button { width: 32px; height: 32px; border-radius: 50%; border: 0; background: var(--r-accent); color: #fff; font-size: 18px; font-weight: var(--r-fw); cursor: pointer; box-shadow: var(--r-shadow-press); }
 .rbt-stepper button:disabled { opacity: .35; cursor: not-allowed; box-shadow: none; }
-.rbt-stepper b { min-width: 18px; text-align: center; font-size: 18px; color: #3b3530; }
+.rbt-stepper b { min-width: 18px; text-align: center; font-size: 18px; color: var(--r-ink); }
 .rbt-list { list-style: none; margin: 4px 0 0; padding: 0; display: grid; gap: 6px; }
-.rbt-list li { display: flex; align-items: center; gap: 8px; background: #faf6f1; border-radius: 14px; padding: 7px 8px 7px 12px; min-height: 34px; }
-.rbt-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px; }
-.rbt-st { font-size: 11px; color: #e8541c; }
-.rbt-list button, .rbt-row button { border: 0; border-radius: 999px; padding: 6px 12px; background: #fff; color: #3b3530; font: inherit; font-size: 12px; font-weight: 700; box-shadow: 0 2px 0 rgba(0,0,0,.12); cursor: pointer; }
+.rbt-list li { display: flex; align-items: center; gap: var(--r-s2); background: var(--r-surface-2); border-radius: var(--r-r-md); padding: 7px 8px 7px 12px; min-height: 34px; }
+.rbt-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--r-fs-md); }
+.rbt-st { font-size: var(--r-fs-xs); color: var(--r-accent); }
+.rbt-list button, .rbt-row button { border: 0; border-radius: var(--r-r-pill); padding: 6px 12px; background: var(--r-surface); color: var(--r-ink); font: inherit; font-size: 12px; font-weight: var(--r-fw); box-shadow: var(--r-shadow-key); cursor: pointer; }
 .rbt-list button:disabled, .rbt-row button:disabled { opacity: .4; cursor: not-allowed; }
-.rbt-row { display: flex; gap: 8px; margin-top: 10px; }
-.rbt-row .rbt-main { background: #ff7a2f; color: #fff; box-shadow: 0 3px 0 #c94a14; }
-.rbt-ev { font-size: 12px; color: #7a6f66; background: transparent !important; min-height: 0 !important; padding: 0 4px !important; }
-.rbt-empty { color: #7a6f66; font-size: 13px; }
-.rbt-soon { font-size: 11px; color: #9a8f86; }
-.rbt-off, .rbt-msg { font-size: 12px; color: #7a6f66; margin: 8px 0 0; min-height: 1em; }
-.rbt-switch { position: relative; width: 40px; height: 24px; }
+.rbt-row { display: flex; flex-wrap: wrap; gap: var(--r-s2); margin-top: 10px; }
+.rbt-row .rbt-main { background: var(--r-accent); color: #fff; box-shadow: var(--r-shadow-press); }
+.rbt-ev { font-size: 12px; color: var(--r-ink-2); background: transparent !important; min-height: 0 !important; padding: 0 4px !important; }
+.rbt-empty { color: var(--r-ink-2); font-size: 13px; }
+.rbt-soon { font-size: var(--r-fs-xs); color: var(--r-ink-3); }
+.rbt-off, .rbt-msg { font-size: 12px; color: var(--r-ink-2); margin: var(--r-s2) 0 0; min-height: 1em; }
+.rbt-switch { position: relative; width: 40px; height: 24px; flex: none; }
 .rbt-switch input { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer; }
-.rbt-switch span { position: absolute; inset: 0; border-radius: 999px; background: #d9cfc6; transition: background .2s; pointer-events: none; }
-.rbt-switch span::after { content: ''; position: absolute; top: 3px; left: 3px; width: 18px; height: 18px; border-radius: 50%; background: #fff; transition: transform .2s; }
-.rbt-switch input:checked + span { background: #ff7a2f; }
+.rbt-switch span { position: absolute; inset: 0; border-radius: var(--r-r-pill); background: #d3c7bc; transition: background var(--r-med); pointer-events: none; }
+.rbt-switch span::after { content: ''; position: absolute; top: 3px; left: 3px; width: 18px; height: 18px; border-radius: 50%; background: #fff; transition: transform var(--r-med) var(--r-ease); }
+.rbt-switch input:checked + span { background: var(--r-accent); }
 .rbt-switch input:checked + span::after { transform: translateX(16px); }
+.rbt-switch input:focus-visible + span { box-shadow: var(--r-focus); }

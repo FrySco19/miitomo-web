@@ -6,7 +6,6 @@
  */
 import type { MiiPhone, PhoneEvent } from './MiiPhone';
 import type { I18n } from '../i18n/i18n';
-import { LANGS } from '../i18n/i18n';
 import './phone.css';
 
 const esc = (s: string) => s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]!));
@@ -51,22 +50,22 @@ export class MiiPhoneView {
     if (!ok && this.phone.phase !== 'closed') this.phone.forceClose();
   }
   private onPhone(e: PhoneEvent) {
-    if (e.type === 'error') { this.toast(this.i18n.t(`phone.err.${e.code}`)); return; }
+    if (e.type === 'error') { this.toast(e.info && this.i18n.has(e.info) ? this.i18n.t(e.info) : this.i18n.t(`phone.err.${e.code}`)); return; }
     clearTimeout(this.settleTimer);
     if (e.phase === 'opening' || e.phase === 'closing') {
       // animations end with `animationend`; with reduced motion (or a hidden tab) the transition completes anyway
-      const reduce = typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches;
+      const m = document.documentElement.dataset.motion;   // set by Reboot Settings; the OS preference otherwise
+      const reduce = m ? m === 'reduced' : typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches;
       this.settleTimer = window.setTimeout(() => this.phone.settle(), reduce ? 0 : 420);
     }
     if (e.phase === 'opening') this.notify(0);
     this.render(false);
   }
   private onClick(e: Event) {
-    const t = (e.target as HTMLElement).closest<HTMLElement>('[data-p],[data-app],[data-lang]'); if (!t) return;
+    const t = (e.target as HTMLElement).closest<HTMLElement>('[data-p],[data-app]'); if (!t) return;
     if (t.dataset.p === 'close') this.phone.close();
     else if (t.dataset.p === 'back') this.phone.back();
     else if (t.dataset.app) this.phone.launch(t.dataset.app);
-    else if (t.dataset.lang) this.i18n.set(t.dataset.lang);
   }
   private toast(text: string) {
     let el = this.panel.querySelector<HTMLElement>('.mp-toast');
@@ -99,18 +98,19 @@ export class MiiPhoneView {
       const def = this.phone.apps.get(app);
       if (!def) { this.home(); this.mounted = 'home'; return; }
       this.screen.innerHTML = '';
-      try { this.unmount = def.mount(this.screen); } catch (err) { console.warn(err); this.screen.innerHTML = `<p class="mp-empty">${esc(t('phone.err.APP_UNAVAILABLE'))}</p>`; }
+      try { this.unmount = def.mount ? def.mount(this.screen) : null; } catch (err) { console.warn(err); this.screen.innerHTML = `<p class="mp-empty">${esc(t('phone.err.APP_UNAVAILABLE'))}</p>`; }
       this.mounted = app;
     }
   }
   private home() {
     const t = (k: string) => this.i18n.t(k);
     const apps = this.phone.apps.visible();
+    const now = new Date();
     this.screen.innerHTML = `<div class="mp-home">
+        <div class="mp-status"><time>${esc(now.toLocaleTimeString(this.i18n.locale, { hour: '2-digit', minute: '2-digit' }))}</time><span>${esc(now.toLocaleDateString(this.i18n.locale, { weekday: 'long', day: 'numeric', month: 'long' }))}</span></div>
         <p class="mp-hello">${esc(t('phone.hello'))}</p>
-        <div class="mp-apps">${apps.map((a) => `<button type="button" class="mp-app" data-app="${esc(a.id)}"><span class="mp-app-ico">${a.icon}</span><span>${esc(t(a.titleKey))}</span></button>`).join('') || `<p class="mp-empty">${esc(t('phone.noApps'))}</p>`}</div>
-        <div class="mp-lang" role="group" aria-label="${esc(t('lang.label'))}"><span>${esc(t('lang.label'))}</span>${LANGS.map((l) => `<button type="button" data-lang="${l}" aria-pressed="${this.i18n.lang === l}">${esc(t('lang.' + l))}</button>`).join('')}</div>
-        <p class="mp-note">${esc(t('reboot.badge'))}</p>
+        <div class="mp-apps">${apps.map((a, i) => { const n = a.badge?.() ?? 0; return `<button type="button" class="mp-app" data-app="${esc(a.id)}" style="--i:${i}"><span class="mp-app-ico" style="background:${a.color ?? 'var(--r-accent-hi)'}">${a.icon}${n ? `<span class="mp-app-badge" aria-label="${n}">${n > 9 ? '9+' : n}</span>` : ''}</span><span class="mp-app-name">${esc(t(a.titleKey))}</span></button>`; }).join('') || `<p class="r-empty">${esc(t('phone.noApps'))}</p>`}</div>
+        <p class="r-note mp-note">${esc(t('reboot.badge'))}</p>
       </div>`;
   }
   private unmountApp() { if (this.unmount) { try { this.unmount(); } catch (e) { console.warn(e); } } this.unmount = null; this.mounted = ''; }

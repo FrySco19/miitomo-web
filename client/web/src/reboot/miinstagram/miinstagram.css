@@ -1,63 +1,62 @@
-/* REBOOT R5 MIInstagram — a Miitomo-coloured photo app inside the MiiPhone (cream, white cards, orange). */
-.mi-app { display: flex; flex-direction: column; gap: 10px; padding: 0 0 14px; min-height: 100%; box-sizing: border-box; font-size: 14px; }
-.mi-head { position: sticky; top: 0; z-index: 1; display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 12px 14px 10px; background: rgba(255,250,244,.96); border-bottom: 1px solid #f1e3d4; }
-.mi-logo { display: inline-flex; align-items: center; gap: 6px; font-size: 16px; color: #e8541c; }
-.mi-logo small { font-size: 12px; color: #9a7a62; }
-.mi-logo svg { width: 28px; height: 28px; border-radius: 9px; background: linear-gradient(140deg, #ffb35c, #ff5e7a); }
-.mi-btn { border: 0; border-radius: 999px; padding: 7px 14px; font: inherit; font-size: 13px; background: #fff; color: #3b3530; box-shadow: 0 2px 0 rgba(0,0,0,.12); cursor: pointer; }
-.mi-btn:disabled { opacity: .45; cursor: not-allowed; }
-.mi-btn.main, .mi-new { background: #ff7a2f; color: #fff; box-shadow: 0 3px 0 #c94a14; }
-.mi-new { border: 0; border-radius: 999px; padding: 7px 14px; font: inherit; font-size: 13px; cursor: pointer; }
-.mi-msg { margin: 0 14px; min-height: 0; font-size: 12.5px; color: #b0623a; }
+/* REBOOT MIInstagram on the R6 design tokens — the Miis' photo-and-moments app inside the MiiPhone. */
+.mi-app { display: flex; flex-direction: column; gap: 10px; padding: 0 0 14px; min-height: 100%; box-sizing: border-box; font-size: var(--r-fs-md); }
+.mi-head { position: sticky; top: 0; z-index: 1; display: flex; align-items: center; justify-content: space-between; gap: var(--r-s2); padding: 12px 14px 10px; background: rgba(255,250,244,.96); border-bottom: 1px solid var(--r-line); backdrop-filter: blur(6px); }
+.mi-logo { display: inline-flex; align-items: center; gap: 6px; font-size: var(--r-fs-lg); color: var(--r-accent); min-width: 0; }
+.mi-logo small { font-size: 12px; color: var(--r-ink-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mi-logo svg { width: 28px; height: 28px; border-radius: 9px; background: linear-gradient(140deg, #ffb35c, var(--r-pink-hi)); flex: none; }
+.mi-msg { margin: 0 14px; font-size: var(--r-fs-sm); color: var(--r-error-ink); }
 .mi-msg:empty { display: none; }
-.mi-warn { margin: 0 14px; font-size: 12px; color: #7a5a2a; background: #fff1c9; border-radius: 12px; padding: 6px 10px; }
-.mi-feed { display: grid; gap: 12px; padding: 0 12px; }
-.mi-card { background: #fff; border-radius: 20px; padding: 10px 12px 12px; box-shadow: 0 3px 0 rgba(120,70,30,.10), 0 8px 18px rgba(120,70,30,.08); display: grid; gap: 8px; }
+.mi-warn { margin: 0 14px; font-size: 12px; color: var(--r-warn-ink); background: var(--r-warn-soft); border-radius: var(--r-r-md); padding: 6px 10px; }
+.mi-feed { display: grid; gap: var(--r-s3); padding: 0 var(--r-s3); }
+.mi-card { display: grid; gap: var(--r-s2); padding: 10px 12px 12px; animation: mi-in var(--r-med) var(--r-ease) both; }
+@keyframes mi-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
 .mi-card > header { display: flex; align-items: center; gap: 9px; }
-.mi-av { width: 34px; height: 34px; flex: none; border-radius: 50%; display: grid; place-items: center; color: #fff; font-size: 15px; box-shadow: inset 0 -3px 0 rgba(0,0,0,.12); }
+.mi-card .r-avatar { width: 34px; height: 34px; font-size: 15px; }
 .mi-who { display: grid; min-width: 0; }
 .mi-who b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.mi-who small { font-size: 11px; color: #9a8f86; font-weight: 600; }
-.mi-photo { border-radius: 14px; overflow: hidden; background: #f4ece4; aspect-ratio: 1; display: grid; place-items: center; }
-.mi-photo img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.mi-who small { font-size: var(--r-fs-xs); color: var(--r-ink-3); }
+.mi-del { margin-left: auto; width: 34px; height: 34px; border: 0; border-radius: 50%; background: none; display: grid; place-items: center; cursor: pointer; color: var(--r-ink-3); transition: background var(--r-fast), color var(--r-fast); }
+.mi-del:hover { background: var(--r-danger-soft); color: var(--r-danger); }
+.mi-del svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+.mi-ask { display: flex; flex-wrap: wrap; align-items: center; gap: var(--r-s2); margin: 0; padding: var(--r-s2) var(--r-s3); border-radius: var(--r-r-md); background: var(--r-danger-soft); color: var(--r-danger); font-size: var(--r-fs-sm); }
+.mi-ask span { flex: 1 1 100%; }
+.mi-photo { border-radius: var(--r-r-md); overflow: hidden; background: var(--r-surface-3); aspect-ratio: 1; display: grid; place-items: center; }
+.mi-photo img { width: 100%; height: 100%; object-fit: cover; display: block; animation: mi-fade var(--r-slow) var(--r-ease) both; }
+@keyframes mi-fade { from { opacity: 0; } to { opacity: 1; } }
 .mi-photo.big { width: min(100%, 300px); justify-self: center; }
-.mi-ph-wait { width: 26px; height: 26px; border-radius: 50%; border: 3px solid #ffd2b0; border-top-color: #ff7a2f; animation: mi-spin 1s linear infinite; }
-@keyframes mi-spin { to { rotate: 360deg; } }
-.mi-noimg { font-size: 12px; color: #9a8f86; padding: 12px; text-align: center; }
-.mi-cap { margin: 0; line-height: 1.35; overflow-wrap: anywhere; }
-.mi-act { display: flex; align-items: center; gap: 10px; background: #fff4e8; border-radius: 14px; padding: 12px; }
-.mi-act p { margin: 0; line-height: 1.35; overflow-wrap: anywhere; }
-.mi-act-ico { flex: none; width: 38px; height: 38px; border-radius: 12px; background: #ff7a2f; display: grid; place-items: center; }
-.mi-act.a-game .mi-act-ico { background: #7b6cf2; } .mi-act.a-visit .mi-act-ico { background: #2aa5c9; } .mi-act.a-meet .mi-act-ico { background: #ff5e7a; }
+.mi-noimg { font-size: 12px; color: var(--r-ink-3); padding: 12px; text-align: center; }
+.mi-cap { margin: 0; line-height: var(--r-lh); overflow-wrap: anywhere; }
+.mi-act { display: flex; align-items: center; gap: 10px; background: var(--r-cream-2); border-radius: var(--r-r-md); padding: 12px; }
+.mi-act p { margin: 0; line-height: var(--r-lh); overflow-wrap: anywhere; }
+.mi-act-ico { flex: none; width: 38px; height: 38px; border-radius: 12px; background: var(--r-accent-hi); display: grid; place-items: center; }
+.mi-act.a-game .mi-act-ico { background: var(--r-purple-hi); } .mi-act.a-visit .mi-act-ico { background: var(--r-blue-hi); } .mi-act.a-meet .mi-act-ico { background: var(--r-pink-hi); }
 .mi-act-ico svg { width: 22px; height: 22px; fill: #fff; }
-.mi-ans { background: #eef8fb; border-radius: 14px; padding: 10px 12px; }
-.mi-q { margin: 0 0 4px; font-size: 12.5px; color: #4a7f90; }
+.mi-ans { background: var(--r-blue-soft); border-radius: var(--r-r-md); padding: 10px 12px; }
+.mi-q { margin: 0 0 4px; font-size: var(--r-fs-sm); color: var(--r-blue); }
 .mi-a { margin: 0; font-size: 15px; overflow-wrap: anywhere; }
 .mi-reacts { display: flex; gap: 6px; flex-wrap: wrap; }
-.mi-r { display: inline-flex; align-items: center; gap: 3px; border: 0; border-radius: 999px; padding: 4px 9px 4px 6px; background: #f6efe8; cursor: pointer; font: inherit; font-size: 12px; color: #6b5f56; min-height: 30px; }
-.mi-r svg { width: 20px; height: 20px; fill: #d9c9bb; }
+.mi-r { display: inline-flex; align-items: center; gap: 3px; border: 0; border-radius: var(--r-r-pill); padding: 4px 9px 4px 6px; background: var(--r-surface-3); cursor: pointer; font: inherit; font-size: 12px; color: var(--r-ink-2); min-height: 32px; transition: transform var(--r-fast) var(--r-ease-pop), background var(--r-fast); }
+.mi-r:active { transform: scale(.92); }
+.mi-r svg { width: 20px; height: 20px; fill: #cdbcae; }
 .mi-r svg .i { fill: none; stroke: #fff; stroke-width: 1.6; stroke-linecap: round; } .mi-r.r-wow svg .i { fill: #fff; stroke: none; }
 .mi-r svg .b { fill: #ffb3c1; stroke: none; }
-.mi-r[aria-pressed="true"] { background: #ffe2cc; color: #e8541c; }
-.mi-r[aria-pressed="true"].r-like svg { fill: #ff5e7a; } .mi-r[aria-pressed="true"].r-haha svg { fill: #f2b233; } .mi-r[aria-pressed="true"].r-wow svg { fill: #2aa5c9; } .mi-r[aria-pressed="true"].r-cute svg { fill: #ff8fa3; }
+.mi-r[aria-pressed="true"] { background: var(--r-accent-soft); color: var(--r-accent); animation: mi-react var(--r-med) var(--r-ease-pop); }
+@keyframes mi-react { 50% { transform: scale(1.12); } }
+.mi-r[aria-pressed="true"].r-like svg { fill: var(--r-pink-hi); } .mi-r[aria-pressed="true"].r-haha svg { fill: #f2b233; } .mi-r[aria-pressed="true"].r-wow svg { fill: var(--r-blue-hi); } .mi-r[aria-pressed="true"].r-cute svg { fill: #ff8fa3; }
 .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
-.mi-link { border: 0; background: none; padding: 0; font: inherit; font-size: 12px; color: #9a7a62; cursor: pointer; justify-self: start; }
+.mi-link { border: 0; background: none; padding: 0; font: inherit; font-size: 12px; color: var(--r-ink-2); cursor: pointer; justify-self: start; text-decoration: underline; text-underline-offset: 2px; }
 .mi-comments { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; font-size: 13px; }
 .mi-comments:empty { display: none; }
-.mi-comments li { overflow-wrap: anywhere; line-height: 1.35; }
+.mi-comments li { overflow-wrap: anywhere; line-height: var(--r-lh); }
 .mi-cform { display: flex; gap: 6px; }
-.mi-cform input { flex: 1; min-width: 0; border: 2px solid #f1e3d4; border-radius: 999px; padding: 6px 12px; font: inherit; font-size: 13px; background: #fffaf4; color: #3b3530; }
-.mi-cform input:focus { outline: none; border-color: #ff9a52; }
-.mi-more { justify-self: center; margin: 4px auto 0; display: block; }
-.mi-foot { margin: 4px 14px 0; text-align: center; font-size: 10.5px; color: #b09a88; }
-.mi-emptybox { text-align: center; padding: 26px 14px; color: #7a6f66; display: grid; gap: 10px; justify-items: center; }
-.mi-emptybox p { margin: 0; }
-.mi-compose { display: grid; gap: 12px; padding: 0 14px; }
-.mi-pick { border: 2px dashed #f1d4bc; border-radius: 16px; padding: 22px 14px; text-align: center; color: #9a7a62; }
+.mi-cform input { flex: 1; min-width: 0; border: 2px solid var(--r-line); border-radius: var(--r-r-pill); padding: 6px 12px; font: inherit; font-size: 13px; background: var(--r-cream); color: var(--r-ink); }
+.mi-cform input:focus { outline: none; border-color: var(--r-blue-hi); }
+.mi-more { justify-self: center; margin: 4px auto 0; }
+.mi-foot { margin: 4px 14px 0; text-align: center; }
+.mi-compose { display: grid; gap: var(--r-s3); padding: 0 14px; }
+.mi-pick { border: 2px dashed var(--r-line-2); border-radius: var(--r-r-lg); padding: 22px 14px; text-align: center; color: var(--r-ink-2); }
 .mi-pick p { margin: 0; }
-.mi-sources { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
-.mi-field { display: grid; gap: 4px; font-size: 12.5px; color: #7a6f66; }
-.mi-field textarea { border: 2px solid #f1e3d4; border-radius: 14px; padding: 8px 10px; font: inherit; font-size: 14px; color: #3b3530; background: #fff; resize: vertical; min-height: 64px; }
-.mi-field textarea:focus { outline: none; border-color: #ff9a52; }
-.mi-field small { justify-self: end; font-size: 11px; }
-.mi-hint { margin: 0; font-size: 11.5px; color: #9a8f86; text-align: center; }
+.mi-sources { display: flex; gap: var(--r-s2); flex-wrap: wrap; justify-content: center; }
+.mi-field textarea { resize: vertical; min-height: 64px; }
+.mi-field small { justify-self: end; font-size: var(--r-fs-xs); }
+.mi-hint { text-align: center; }

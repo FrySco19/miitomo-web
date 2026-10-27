@@ -1,0 +1,134 @@
+/*
+ * REBOOT design system (R6.0) — one set of tokens and components for every Reboot surface (Reboot panel, Piazza,
+ * places, Sala Giochi, MiiPhone and its apps). Miitomo grammar: warm cream, white rounded cards with a soft "pressed"
+ * shadow, orange as the one accent. Text colours meet WCAG AA (≥ 4.5:1 for body text) on their backgrounds.
+ * Loaded once with the Reboot chunk: Classic never loads it.
+ */
+:root {
+  /* colour */
+  --r-cream: #fffaf4;
+  --r-cream-2: #fff1e2;
+  --r-cream-3: #ffe2c6;
+  --r-surface: #ffffff;
+  --r-surface-2: #faf6f1;
+  --r-surface-3: #f4ece4;
+  --r-line: #f1e3d4;
+  --r-line-2: #e6c9ae;
+  --r-ink: #3b3530;          /* 11.6:1 on cream */
+  --r-ink-2: #6b6058;        /* 5.9:1 */
+  --r-ink-3: #7a6f66;        /* 4.7:1 — smallest text allowed */
+  --r-accent: #cc4b12;       /* buttons with white text (4.6:1) */
+  --r-accent-hi: #ff7a2f;    /* decorative: phone, icons, highlights (never under small text) */
+  --r-accent-soft: #fff1df;
+  --r-accent-shadow: #9e3a0d;
+  --r-blue: #1b7f9e;  --r-blue-hi: #2aa5c9;  --r-blue-soft: #e4f4f9;
+  --r-purple: #5b4cd6; --r-purple-hi: #7b6cf2; --r-purple-soft: #f1efff;
+  --r-pink: #c2335a;  --r-pink-hi: #ff5e7a;  --r-pink-soft: #ffe8ee;
+  --r-green: #2f7d3d; --r-green-hi: #3aa651; --r-green-soft: #e2f6e4;
+  --r-danger: #b23a1e; --r-danger-soft: #ffe5e0;
+  --r-warn-ink: #7a5a2a; --r-warn-soft: #fff1c9;
+  --r-error-ink: #9a4e28;
+  --r-scrim: rgba(48, 36, 26, .18);
+  --r-toast: rgba(40, 32, 24, .9);
+  /* type */
+  --r-font: var(--pl-font, "MiitomoBalloon", ui-rounded, "Nunito", "Segoe UI", system-ui, sans-serif);
+  --r-fs-xs: 11.5px; --r-fs-sm: 12.5px; --r-fs-md: 14px; --r-fs-lg: 16px; --r-fs-xl: 20px; --r-fs-2xl: 28px; --r-fs-3xl: 38px;
+  --r-fw: 700;
+  --r-lh: 1.35;
+  /* space */
+  --r-s1: 4px; --r-s2: 8px; --r-s3: 12px; --r-s4: 16px; --r-s5: 24px; --r-s6: 32px;
+  /* shape */
+  --r-r-sm: 10px; --r-r-md: 14px; --r-r-lg: 20px; --r-r-xl: 28px; --r-r-pill: 999px;
+  --r-shadow-press: 0 3px 0 var(--r-accent-shadow);
+  --r-shadow-key: 0 2px 0 rgba(60, 40, 20, .14);
+  --r-shadow-card: 0 4px 0 rgba(120, 70, 30, .10), 0 10px 22px rgba(120, 70, 30, .09);
+  --r-shadow-float: 0 6px 0 rgba(40, 60, 90, .12), 0 14px 34px rgba(0, 0, 0, .18);
+  --r-focus: 0 0 0 3px var(--r-surface), 0 0 0 6px var(--r-blue-hi);
+  /* motion */
+  --r-fast: 120ms; --r-med: 220ms; --r-slow: 360ms;
+  --r-ease: cubic-bezier(.2, .8, .2, 1);
+  --r-ease-pop: cubic-bezier(.2, .9, .3, 1.15);
+  /* layers (inside the Reboot layer; Classic has its own) */
+  --r-z-bar: 8; --r-z-hub: 60; --r-z-scrim: 70; --r-z-phone: 71; --r-z-dock: 72; --r-z-toast: 80;
+}
+/* reduced motion: the OS setting (unless Settings → Animations says "All": data-motion="full") or the Reboot setting */
+@media (prefers-reduced-motion: reduce) { :root:not([data-motion="full"]) { --r-fast: 1ms; --r-med: 1ms; --r-slow: 1ms; } }
+:root[data-motion="reduced"] { --r-fast: 1ms; --r-med: 1ms; --r-slow: 1ms; }
+:root[data-motion="reduced"] [data-reboot] *, :root[data-motion="reduced"] [data-reboot] { animation-duration: 1ms !important; transition-duration: 1ms !important; }
+
+/* ---------- components ---------- */
+.r-btn { display: inline-flex; align-items: center; justify-content: center; gap: var(--r-s2); min-height: 36px; padding: 0 var(--r-s4); border: 0; border-radius: var(--r-r-pill); font: inherit; font-family: var(--r-font); font-size: var(--r-fs-sm); font-weight: var(--r-fw); line-height: 1; cursor: pointer; background: var(--r-surface); color: var(--r-ink); box-shadow: var(--r-shadow-key); transition: transform var(--r-fast) var(--r-ease), filter var(--r-fast); -webkit-tap-highlight-color: transparent; white-space: nowrap; }
+.r-btn:hover:not(:disabled) { filter: brightness(1.04); transform: translateY(-1px); }
+.r-btn:active:not(:disabled) { transform: translateY(2px); box-shadow: none; }
+.r-btn:disabled { opacity: .45; cursor: not-allowed; }
+.r-btn.primary { background: var(--r-accent); color: #fff; box-shadow: var(--r-shadow-press); }
+.r-btn.blue { background: var(--r-blue); color: #fff; box-shadow: 0 3px 0 #135e74; }
+.r-btn.purple { background: var(--r-purple); color: #fff; box-shadow: 0 3px 0 #3f33a6; }
+.r-btn.danger { background: var(--r-danger); color: #fff; box-shadow: 0 3px 0 #7d2813; }
+.r-btn.ghost { background: transparent; box-shadow: none; color: var(--r-ink-2); }
+.r-btn.sm { min-height: 30px; padding: 0 var(--r-s3); font-size: var(--r-fs-xs); }
+.r-btn.lg { min-height: 44px; padding: 0 var(--r-s5); font-size: var(--r-fs-md); }
+.r-btn.icon { width: 36px; padding: 0; }
+.r-btn svg { width: 18px; height: 18px; flex: none; }
+
+.r-card { background: var(--r-surface); border-radius: var(--r-r-lg); padding: var(--r-s3) var(--r-s4); box-shadow: var(--r-shadow-card); }
+.r-card.flat { box-shadow: none; background: var(--r-surface-2); }
+.r-card.off { background: rgba(255, 255, 255, .6); box-shadow: none; border: 2px dashed var(--r-line-2); }
+
+.r-chip { display: inline-flex; align-items: center; gap: var(--r-s1); border-radius: var(--r-r-pill); padding: 3px 9px; font-size: var(--r-fs-xs); font-weight: var(--r-fw); background: var(--r-surface-3); color: var(--r-ink-2); white-space: nowrap; }
+.r-chip.accent { background: var(--r-accent-soft); color: var(--r-accent); }
+.r-chip.ok { background: var(--r-green-soft); color: var(--r-green); }
+.r-chip.bad { background: var(--r-danger-soft); color: var(--r-danger); }
+.r-chip.blue { background: var(--r-blue-soft); color: var(--r-blue); }
+.r-chip.purple { background: var(--r-purple-soft); color: var(--r-purple); }
+
+.r-tabs { display: flex; gap: var(--r-s1); padding: var(--r-s1); background: var(--r-surface-3); border-radius: var(--r-r-pill); overflow-x: auto; scrollbar-width: none; }
+.r-tabs button { flex: 1 0 auto; border: 0; background: transparent; border-radius: var(--r-r-pill); padding: 7px 12px; font: inherit; font-size: var(--r-fs-sm); font-weight: var(--r-fw); color: var(--r-ink-2); cursor: pointer; transition: background var(--r-fast), color var(--r-fast); }
+.r-tabs button[aria-selected="true"] { background: var(--r-surface); color: var(--r-accent); box-shadow: var(--r-shadow-key); }
+
+.r-list { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--r-s2); }
+.r-row { display: flex; align-items: center; gap: var(--r-s3); background: var(--r-surface-2); border-radius: var(--r-r-md); padding: var(--r-s2) var(--r-s2) var(--r-s2) var(--r-s3); min-height: 40px; }
+.r-row > .r-grow { flex: 1; min-width: 0; display: grid; gap: 2px; }
+.r-row .r-grow b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.r-row .r-grow small { font-size: var(--r-fs-xs); color: var(--r-ink-3); }
+
+.r-avatar { flex: none; width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; color: #fff; font-weight: var(--r-fw); font-size: 17px; box-shadow: inset 0 -3px 0 rgba(0, 0, 0, .14); }
+.r-avatar.lg { width: 72px; height: 72px; font-size: 30px; }
+.r-avatar.p0 { background: #3e86c4; } .r-avatar.p1 { background: #4f9a44; } .r-avatar.p2 { background: #b98a12; } .r-avatar.p3 { background: #d4581a; }
+
+.r-field { display: grid; gap: var(--r-s1); font-size: var(--r-fs-sm); color: var(--r-ink-2); }
+.r-field input[type="text"], .r-field textarea, .r-field select, .r-input { width: 100%; box-sizing: border-box; border: 2px solid var(--r-line); border-radius: var(--r-r-md); padding: 8px 12px; font: inherit; font-size: var(--r-fs-md); color: var(--r-ink); background: var(--r-surface); }
+.r-field input:focus, .r-field textarea:focus, .r-field select:focus, .r-input:focus { outline: none; border-color: var(--r-blue-hi); }
+
+.r-toggle { position: relative; display: inline-block; width: 46px; height: 28px; flex: none; }
+.r-toggle input { position: absolute; inset: 0; opacity: 0; margin: 0; cursor: pointer; z-index: 1; }
+.r-toggle span { position: absolute; inset: 0; border-radius: var(--r-r-pill); background: #d3c7bc; transition: background var(--r-med) var(--r-ease); pointer-events: none; }
+.r-toggle span::after { content: ''; position: absolute; top: 3px; left: 3px; width: 22px; height: 22px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0, 0, 0, .25); transition: transform var(--r-med) var(--r-ease); }
+.r-toggle input:checked + span { background: var(--r-accent); }
+.r-toggle input:checked + span::after { transform: translateX(18px); }
+.r-toggle input:focus-visible + span { box-shadow: var(--r-focus); }
+
+.r-range { width: 100%; accent-color: var(--r-accent); height: 28px; }
+
+.r-seg { display: inline-flex; flex-wrap: wrap; gap: var(--r-s1); }
+.r-seg button { border: 0; border-radius: var(--r-r-pill); padding: 6px 12px; font: inherit; font-size: var(--r-fs-sm); font-weight: var(--r-fw); background: var(--r-surface); color: var(--r-ink-2); box-shadow: var(--r-shadow-key); cursor: pointer; }
+.r-seg button[aria-pressed="true"] { background: var(--r-accent); color: #fff; box-shadow: var(--r-shadow-press); }
+
+.r-empty { display: grid; gap: var(--r-s3); justify-items: center; text-align: center; padding: var(--r-s5) var(--r-s4); color: var(--r-ink-2); font-size: var(--r-fs-md); }
+.r-empty p { margin: 0; max-width: 32ch; }
+.r-note { margin: 0; font-size: var(--r-fs-xs); color: var(--r-ink-3); }
+.r-msg { margin: 0; font-size: var(--r-fs-sm); color: var(--r-error-ink); }
+.r-msg:empty { display: none; }
+.r-badge { display: inline-block; font-size: var(--r-fs-xs); font-weight: var(--r-fw); letter-spacing: .03em; color: #fff; background: var(--r-accent); border-radius: var(--r-r-pill); padding: 3px 10px; }
+.r-h { margin: 0; font-size: var(--r-fs-lg); color: var(--r-ink); }
+.r-sub { margin: 0; font-size: var(--r-fs-xs); letter-spacing: .06em; text-transform: uppercase; color: var(--r-ink-3); }
+
+.r-toast { position: fixed; left: 50%; bottom: max(24px, env(safe-area-inset-bottom)); translate: -50% 0; z-index: var(--r-z-toast); margin: 0; max-width: min(90vw, 420px); background: var(--r-toast); color: #fff; padding: 9px 16px; border-radius: var(--r-r-pill); font-size: var(--r-fs-sm); font-weight: var(--r-fw); text-align: center; animation: r-toast-in var(--r-med) var(--r-ease-pop) both; pointer-events: none; }
+@keyframes r-toast-in { from { opacity: 0; transform: translateY(8px) scale(.96); } to { opacity: 1; transform: none; } }
+.r-spin { width: 26px; height: 26px; border-radius: 50%; border: 3px solid var(--r-cream-3); border-top-color: var(--r-accent-hi); animation: r-spin 1s linear infinite; }
+@keyframes r-spin { to { rotate: 360deg; } }
+
+/* one focus style for every Reboot control */
+[data-reboot] :focus-visible { outline: none; box-shadow: var(--r-focus); border-radius: var(--r-r-sm); }
+[data-reboot] .r-btn:focus-visible, [data-reboot] .r-tabs button:focus-visible, [data-reboot] .r-seg button:focus-visible { border-radius: var(--r-r-pill); }
+.r-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }

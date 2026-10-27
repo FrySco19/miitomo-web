@@ -82,7 +82,7 @@ export class HubScreen {
     const card = (d: DestinationView) => `<button type="button" class="hub-card k-${d.kind} d-${esc(d.id)}${d.current ? ' current' : ''}" data-dest="${esc(d.id)}" ${d.panel ? 'data-panel="1"' : ''} ${d.available && !d.current && !st.navigating ? '' : 'disabled'} aria-disabled="${!d.available}">
         <span class="hub-ico">${HUB_ICON[d.id === 'friends' ? 'friends' : d.id === 'games' ? 'games' : d.kind === 'place' ? 'public' : d.kind] ?? HUB_ICON.future}</span><span class="hub-txt"><b>${esc(d.title)}</b><small>${esc(d.subtitle)}</small>${!d.available && d.reason ? `<em>${esc(d.reason)}</em>` : ''}</span>${d.kind === 'future' ? `<span class="hub-soon">${esc(d.phase ?? '')}</span>` : ''}</button>`;
     const main = cards.filter((c) => c.kind !== 'future'), fut = cards.filter((c) => c.kind === 'future');
-    const langs = this.opts.i18n ? `<div class="hub-lang" role="group" aria-label="${esc(t('lang.label'))}">${LANGS.map((l) => `<button type="button" data-lang="${l}" aria-pressed="${this.opts.i18n!.lang === l}">${esc(t('lang.' + l))}</button>`).join('')}</div>` : '';
+    const langs = this.opts.i18n ? `<div class="hub-lang r-seg" role="group" aria-label="${esc(t('lang.label'))}">${LANGS.map((l) => `<button type="button" data-lang="${l}" aria-pressed="${this.opts.i18n!.lang === l}">${esc(t('lang.' + l))}</button>`).join('')}</div>` : '';
     this.screen.innerHTML = `<div class="hub-inner">
         <header>${langs}<p class="hub-badge">${esc(t('hub.badge'))}</p><h1>${esc(t('hub.title'))}</h1><p class="hub-sub">${esc(t('hub.sub'))}</p></header>
         <div class="hub-grid">${main.map(card).join('')}</div>

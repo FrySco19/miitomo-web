@@ -65,7 +65,7 @@ export class GameRoomView {
   private async board() {
     const ctx = await this.games.context();
     const st = this.games.stats;
-    const rows = this.games.registry.status(ctx).map(({ def, availability }) => `<li class="gr-game"><div><b>${esc(this.t(def.titleKey))}</b><p>${esc(this.t(def.descKey))}</p><small>${esc(this.t('game.meta', { min: def.players.min, max: def.players.max, sec: def.durationSec }))}</small>${availability.ok ? '' : `<em>${esc(this.t(`game.unavailable.${availability.code}`, availability.vars))}</em>`}</div><button type="button" class="gr-play" data-play="${esc(def.id)}" ${availability.ok ? '' : 'disabled'}>${esc(this.t('game.play'))}</button></li>`).join('');
+    const rows = this.games.registry.status(ctx).map(({ def, availability }) => `<li class="gr-game"><div><b>${esc(this.t(def.titleKey))}</b><p>${esc(this.t(def.descKey))}</p><small>${esc(this.t('game.meta', { min: def.players.min, max: def.players.max, sec: def.durationSec }))}</small>${availability.ok ? '' : `<em>${esc(this.t(`game.unavailable.${availability.code}`, availability.vars))}</em>`}</div><button type="button" class="gr-play r-btn purple" data-play="${esc(def.id)}" ${availability.ok ? '' : 'disabled'}>${esc(this.t('game.play'))}</button></li>`).join('');
     const free = this.games.freeMiis().length;
     return `<div class="gr-board"><header><b>${esc(this.t('games.board'))}</b><small>${esc(this.t('games.here', { n: free }))}</small></header>
       <ul class="gr-games">${rows}</ul>
@@ -89,13 +89,13 @@ export class GameRoomView {
       <p class="gr-sim">${esc(this.t('game.simNote'))}</p></div>`;
   }
   private result(s: GameSession) {
-    if (s.state === 'aborted') return `<div class="gr-result"><b>${esc(this.t('game.aborted.' + (s.abortCode ?? 'INTERRUPTED')))}</b><button type="button" class="gr-play" data-a="back">${esc(this.t('game.backToRoom'))}</button></div>`;
+    if (s.state === 'aborted') return `<div class="gr-result"><b>${esc(this.t('game.aborted.' + (s.abortCode ?? 'INTERRUPTED')))}</b><button type="button" class="gr-play r-btn purple" data-a="back">${esc(this.t('game.backToRoom'))}</button></div>`;
     const r = s.result!, reward = this.games.lastReward;
     const won = r.winners.includes('host');
     return `<div class="gr-result"><header><b>${esc(won ? this.t('game.youWon') : r.winners.length ? this.t('game.winnerIs', { name: r.players.find((p) => p.id === r.winners[0])?.name ?? '' }) : this.t('game.noWinner'))}</b></header>
       <ol class="gr-rank">${r.players.map((p) => `<li><span class="gr-pos">${p.rank}</span><span>${esc(p.id === 'host' ? this.t('game.you') : p.name)}${p.left ? ` <em>${esc(this.t('game.left'))}</em>` : ''}</span><b>${p.score}</b></li>`).join('')}</ol>
       ${reward ? `<p class="gr-reward">${esc(this.t('game.reward', { name: this.t(reward.titleKey) }))}</p>` : ''}
-      <button type="button" class="gr-play" data-a="back">${esc(this.t('game.backToRoom'))}</button></div>`;
+      <button type="button" class="gr-play r-btn purple" data-a="back">${esc(this.t('game.backToRoom'))}</button></div>`;
   }
   dispose() { this.stopTimer(); for (const u of this.unsubs) u(); this.unsubs = []; this.el.remove(); }
 }

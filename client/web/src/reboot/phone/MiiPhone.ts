@@ -15,10 +15,19 @@ export interface AppDefinition {
   titleKey: string;
   /** Inline SVG (decorative). */
   icon: string;
+  /** Icon tile colour (a design-token colour). */
+  color?: string;
   /** false = declared for the future: never shown, never opened. */
   implemented: boolean;
   /** Mounts the app into the phone screen; returns the unmount (listeners, timers, object URLs released there). */
-  mount(el: HTMLElement): () => void;
+  mount?(el: HTMLElement): () => void;
+  /**
+   * R6: a SHORTCUT instead of a screen (Piazza, Casa, Giochi…): runs a real navigation and closes the phone. Returns
+   * false (with an i18n error key) when the move is not possible right now; the phone stays as it was.
+   */
+  action?(): Promise<{ ok: boolean; error?: string }>;
+  /** Number shown on the icon (new posts, invitations…); 0 = none. */
+  badge?(): number;
 }
 export type PhonePhase = 'closed' | 'opening' | 'open' | 'closing';
 export type PhoneError = 'APP_UNAVAILABLE' | 'ALREADY_OPEN' | 'ALREADY_CLOSED' | 'BUSY' | 'HIDDEN';
@@ -26,7 +35,7 @@ export type PhoneEvent = { type: 'state'; phase: PhonePhase; app: string } | { t
 
 export class MiiPhoneApps {
   private defs = new Map<string, AppDefinition>();
-  register(d: AppDefinition) { if (!/^[a-z0-9-]{2,24}$/.test(d.id) || d.id === 'home' || this.defs.has(d.id)) return false; this.defs.set(d.id, d); return true; }
+  register(d: AppDefinition) { if (!/^[a-z0-9-]{2,24}$/.test(d.id) || d.id === 'home' || this.defs.has(d.id) || (!d.mount && !d.action)) return false; this.defs.set(d.id, d); return true; }
   get(id: string) { const d = this.defs.get(id); return d && d.implemented ? d : null; }
   /** What the home screen shows: implemented apps only. */
   visible() { return [...this.defs.values()].filter((d) => d.implemented); }
@@ -56,7 +65,7 @@ export class MiiPhone {
     if (this.phase === 'opening' || this.phase === 'closing') return this.fail('BUSY');
     if (this.phase === 'open') return this.fail('ALREADY_OPEN');
     const target = app ?? this.last;
-    if (target !== 'home' && !this.apps.get(target)) { if (app) return this.fail('APP_UNAVAILABLE', app); this.stack = ['home']; }
+    if (target !== 'home' && !this.apps.get(target)?.mount) { if (app) return this.fail('APP_UNAVAILABLE', app); this.stack = ['home']; }
     else this.stack = target === 'home' ? ['home'] : ['home', target];
     this.phase = 'opening'; this.counters.opens++;
     return this.state();
@@ -75,10 +84,23 @@ export class MiiPhone {
   }
   launch(id: string) {
     if (this.phase !== 'open') return this.fail(this.phase === 'closed' ? 'ALREADY_CLOSED' : 'BUSY');
-    if (!this.apps.get(id)) return this.fail('APP_UNAVAILABLE', id);
+    const def = this.apps.get(id);
+    if (!def) return this.fail('APP_UNAVAILABLE', id);
+    if (!def.mount && def.action) { void this.shortcut(def); return { ok: true as const }; }
     if (this.app === id) return { ok: true as const };
     this.stack = ['home', id];
     return this.state();
+  }
+  private running = false;
+  /** A shortcut app: the phone closes and the move happens; a refusal keeps the phone open and says why. */
+  private async shortcut(def: AppDefinition) {
+    if (this.running) { this.fail('BUSY'); return; }
+    this.running = true;
+    try {
+      const r = await def.action!();
+      if (!r.ok) { this.counters.refused++; this.emit({ type: 'error', code: 'APP_UNAVAILABLE', info: r.error }); return; }
+      if (this.phase === 'open') this.close();
+    } finally { this.running = false; }
   }
   back() {
     if (this.phase !== 'open') return this.fail('BUSY');

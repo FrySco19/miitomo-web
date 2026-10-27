@@ -1,14 +1,13 @@
-/* REBOOT R5 place bar (friend rooms, Sala Giochi): where you are, who is there, your role, Piazza / Casa. */
-.pb-bar { position: fixed; left: 50%; top: max(12px, env(safe-area-inset-top)); translate: -50% 0; z-index: 8; display: flex; align-items: center; gap: 10px; padding: 7px 8px 7px 10px; background: rgba(255,255,255,.95); border-radius: 22px; box-shadow: 0 5px 0 rgba(40,60,90,.12), 0 10px 26px rgba(0,0,0,.14); max-width: calc(100vw - 32px); box-sizing: border-box; }
+/* REBOOT place bar (friends' rooms, Sala Giochi) on the R6 design tokens. */
+.pb-bar { position: fixed; left: 50%; top: max(12px, env(safe-area-inset-top)); translate: -50% 0; z-index: var(--r-z-bar); display: flex; align-items: center; gap: 10px; padding: 7px 8px 7px 10px; background: rgba(255,255,255,.96); border-radius: var(--r-r-xl); box-shadow: var(--r-shadow-float); max-width: calc(100vw - 32px); box-sizing: border-box; animation: pb-in var(--r-med) var(--r-ease) both; }
+@keyframes pb-in { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: none; } }
 .pb-main { display: flex; align-items: center; gap: 9px; min-width: 0; }
-.pb-ico { flex: none; width: 34px; height: 34px; border-radius: 11px; background: #ff5e7a; }
-.pb-ico.games { background: #7b6cf2; }
+.pb-ico { flex: none; width: 34px; height: 34px; border-radius: var(--r-r-sm); background: var(--r-pink-hi); }
+.pb-ico.games { background: var(--r-purple-hi); }
 .pb-txt { display: grid; min-width: 0; }
-.pb-txt b { font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.pb-txt small { font-size: 11.5px; color: #7a6f66; white-space: nowrap; }
+.pb-txt b { font-size: var(--r-fs-md); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pb-txt small { font-size: var(--r-fs-xs); color: var(--r-ink-2); white-space: nowrap; }
 .pb-actions { display: flex; gap: 6px; }
-.pb-actions button { border: 0; border-radius: 999px; padding: 7px 12px; font: inherit; font-size: 12.5px; font-weight: 700; background: #ff7a2f; color: #fff; box-shadow: 0 3px 0 #c94a14; cursor: pointer; white-space: nowrap; }
-.pb-actions button + button { background: #fff; color: #3b3530; box-shadow: 0 2px 0 rgba(0,0,0,.14); }
-.pb-actions button:disabled { opacity: .5; }
-.pb-toast { position: absolute; left: 50%; top: calc(100% + 8px); translate: -50% 0; margin: 0; white-space: nowrap; max-width: 90vw; overflow: hidden; text-overflow: ellipsis; background: rgba(40,32,24,.88); color: #fff; padding: 7px 14px; border-radius: 999px; font-size: 12.5px; }
+.pb-actions .armed { background: var(--r-danger); color: #fff; box-shadow: var(--r-shadow-press); }
+.pb-toast { position: absolute; left: 50%; top: calc(100% + 8px); translate: -50% 0; margin: 0; white-space: nowrap; max-width: 90vw; overflow: hidden; text-overflow: ellipsis; background: var(--r-toast); color: #fff; padding: 7px 14px; border-radius: var(--r-r-pill); font-size: var(--r-fs-sm); animation: r-toast-in var(--r-med) var(--r-ease-pop) both; }
 @media (max-width: 560px) { .pb-bar { left: 12px; right: 12px; translate: none; max-width: none; } .pb-txt small { white-space: normal; } }
