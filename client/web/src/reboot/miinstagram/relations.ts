@@ -15,6 +15,7 @@ const MAX_PAIRS = 400;
 
 export class Relations {
   private pairs = new Map<string, number>();
+  private subs = new Set<(a: string, b: string, before: number, after: number) => void>();
   constructor(private kv: Kv | null = null, private user = 'host') {
     try {
       const v = JSON.parse(kv?.getItem(KEY) ?? 'null');
@@ -26,12 +27,16 @@ export class Relations {
   get(a: string, b: string): number { if (a === b) return 1; return this.pairs.get(this.key(a, b)) ?? this.start(a, b); }
   bump(a: string, b: string, why: Bump) {
     if (!a || !b || a === b) return this.get(a, b);
-    const v = Math.min(1, this.get(a, b) + AMOUNT[why]);
+    const before = this.get(a, b), v = Math.min(1, before + AMOUNT[why]);
     this.pairs.set(this.key(a, b), +v.toFixed(3));
     if (this.pairs.size > MAX_PAIRS) { const weakest = [...this.pairs].sort((x, y) => x[1] - y[1])[0]; this.pairs.delete(weakest[0]); }
     try { this.kv?.setItem(KEY, JSON.stringify({ v: 1, pairs: Object.fromEntries(this.pairs) })); } catch { /* memory only */ }
+    for (const s of this.subs) { try { s(a, b, before, v); } catch (e) { console.warn(e); } }
     return v;
   }
+  /** R6: told after every bump (the economy pays when a friend reaches a new level). */
+  subscribe(cb: (a: string, b: string, before: number, after: number) => void) { this.subs.add(cb); return () => this.subs.delete(cb); }
+  get listenerCount() { return this.subs.size; }
   /** Closest Miis of `a` among `others` (best first). */
   closest(a: string, others: string[]) { return [...others].sort((x, y) => this.get(a, y) - this.get(a, x)); }
   get size() { return this.pairs.size; }
