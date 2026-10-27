@@ -14,7 +14,6 @@ import './miinstagram.css';
 
 const esc = (s: string) => s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]!));
 const PAGE = 8;
-const COLORS = ['#5aa9e6', '#7bc96f', '#f2c14e', '#ff7a2f'];
 export const MIINSTAGRAM_ICON = '<svg viewBox="0 0 40 40" aria-hidden="true"><rect x="5" y="9" width="30" height="24" rx="7" fill="#fff"/><circle cx="20" cy="21" r="7.5" fill="#ff7a2f"/><circle cx="20" cy="21" r="4" fill="#fff"/><circle cx="29.5" cy="14" r="2" fill="#ff5e7a"/><path d="M13 9l2.5-3.5h9L27 9" fill="#fff"/></svg>';
 const REACT_ICON: Record<ReactionId, string> = {
   like: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20s-7-4.4-7-9.6A4 4 0 0 1 12 8a4 4 0 0 1 7 2.4C19 15.6 12 20 12 20z"/></svg>',
@@ -41,6 +40,8 @@ export interface MIInstagramDeps {
   openMiifoto: (() => void) | null;
   /** Closes the phone (e.g. before going to Miifoto). */
   closePhone: () => void;
+  /** R6 Settings: ask before deleting a post (default: ask). */
+  confirm?: () => boolean;
 }
 
 export class MIInstagramApp {
@@ -54,6 +55,8 @@ export class MIInstagramApp {
   private more = false;
   private msg = '';
   private busy = false;
+  /** The own post waiting for "delete?" to be confirmed. */
+  private asking: string | null = null;
   /** Unseen posts (the phone shows a dot). */
   unseen = 0;
   private notifySubs = new Set<(n: number) => void>();
@@ -103,11 +106,11 @@ export class MIInstagramApp {
     const el = this.el; if (!el) return;
     if (this.view === 'compose') { el.innerHTML = this.composeHtml(); return; }
     const local = this.d.svc.persistent === false ? `<p class="mi-warn">${esc(this.t('feed.memoryOnly'))}</p>` : '';
-    el.innerHTML = `<header class="mi-head"><span class="mi-logo">${MIINSTAGRAM_ICON}<small>${esc(this.t('feed.tagline'))}</small></span><button type="button" class="mi-new" data-a="new">${esc(this.t('feed.new'))}</button></header>
+    el.innerHTML = `<header class="mi-head"><span class="mi-logo">${MIINSTAGRAM_ICON}<small>${esc(this.t('feed.tagline'))}</small></span><button type="button" class="mi-new r-btn primary sm" data-a="new">${esc(this.t('feed.new'))}</button></header>
       ${local}<p class="mi-msg" role="status">${esc(this.msg)}</p>
-      <div class="mi-feed">${this.posts.length ? '' : `<div class="mi-emptybox"><p>${esc(this.t('feed.empty'))}</p><button type="button" class="mi-btn main" data-a="new">${esc(this.t('feed.firstPost'))}</button></div>`}</div>
-      ${this.more ? `<button type="button" class="mi-btn mi-more" data-a="more">${esc(this.t('feed.more'))}</button>` : ''}
-      <p class="mi-foot">${esc(this.t('feed.localNote'))}</p>`;
+      <div class="mi-feed">${this.posts.length ? '' : `<div class="mi-emptybox r-empty"><p>${esc(this.t('feed.empty'))}</p><button type="button" class="r-btn primary" data-a="new">${esc(this.t('feed.firstPost'))}</button></div>`}</div>
+      ${this.more ? `<button type="button" class="r-btn mi-more" data-a="more">${esc(this.t('feed.more'))}</button>` : ''}
+      <p class="mi-foot r-note">${esc(this.t('feed.localNote'))}</p>`;
     const feed = el.querySelector('.mi-feed')!;
     for (const p of this.posts) feed.append(this.card(p));
     this.loadPhotos(el);
@@ -115,23 +118,27 @@ export class MIInstagramApp {
   private status() { const m = this.el?.querySelector('.mi-msg'); if (m) m.textContent = this.msg; }
   private author(id: string) {
     const dir = this.d.directory(), name = dir.name(id) ?? this.t('feed.unknownMii'), p = dir.personality(id);
-    return { name, color: COLORS[p] ?? COLORS[2], initial: (name.trim()[0] ?? '?').toUpperCase() };
+    return { name, p: [0, 1, 2, 3].includes(p) ? p : 2, initial: (name.trim()[0] ?? '?').toUpperCase() };
   }
   private card(p: Post): HTMLElement {
     const a = this.author(p.authorId), mine = p.reactions[this.d.me] ?? null, counts = reactionCounts(p);
-    const art = document.createElement('article'); art.className = `mi-card k-${p.kind}`; art.dataset.id = p.id;
+    const art = document.createElement('article'); art.className = `mi-card r-card k-${p.kind}`; art.dataset.id = p.id;
     let body = '';
     if (p.kind === 'photo') body = `<div class="mi-photo" data-photo="${esc(p.photoId)}"><span class="mi-ph-wait"></span></div>${p.caption ? `<p class="mi-cap"><b>${esc(a.name)}</b> ${esc(p.caption)}</p>` : ''}`;
     if (p.kind === 'activity') body = `<div class="mi-act a-${p.activity}"><span class="mi-act-ico">${KIND_ICON[p.activity] ?? KIND_ICON.social}</span><p>${esc(this.d.i18n.line(p.line))}</p></div>`;
     if (p.kind === 'answer') body = `<div class="mi-ans"><p class="mi-q">${esc(this.d.i18n.line(p.question))}</p><p class="mi-a">“${esc(p.answer)}”</p></div>`;
     const showAll = this.open.has(p.id), list = showAll ? p.comments : p.comments.slice(-2);
     const comments = list.map((c) => { const ca = this.author(c.authorId); return `<li><b>${esc(ca.name)}</b> ${esc(c.text ?? (c.line ? this.d.i18n.line(c.line) : ''))}</li>`; }).join('');
-    art.innerHTML = `<header><span class="mi-av" style="background:${a.color}" aria-hidden="true">${esc(a.initial)}</span><span class="mi-who"><b>${esc(a.name)}</b><small>${esc(this.d.i18n.ago(p.createdAt))} · ${esc(this.t('feed.kind.' + p.kind))}</small></span></header>
-      ${body}
+    const own = p.authorId === this.d.me;
+    const del = !own ? '' : this.asking === p.id
+      ? `<div class="mi-ask" role="group" aria-label="${esc(this.t('feed.deleteAsk'))}"><span>${esc(this.t('feed.deleteAsk'))}</span><button type="button" class="r-btn danger sm" data-delyes="${esc(p.id)}">${esc(this.t('feed.deleteYes'))}</button><button type="button" class="r-btn ghost sm" data-delno="${esc(p.id)}">${esc(this.t('feed.deleteNo'))}</button></div>`
+      : '';
+    art.innerHTML = `<header><span class="r-avatar p${a.p}" aria-hidden="true">${esc(a.initial)}</span><span class="mi-who"><b>${esc(a.name)}</b><small>${esc(this.d.i18n.ago(p.createdAt))} · ${esc(this.t('feed.kind.' + p.kind))}</small></span>${own ? `<button type="button" class="mi-del" data-del="${esc(p.id)}" aria-label="${esc(this.t('feed.delete'))}" title="${esc(this.t('feed.delete'))}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 7h14M10 7V5h4v2M7 7l1 12h8l1-12"/></svg></button>` : ''}</header>
+      ${del}${body}
       <div class="mi-reacts" role="group" aria-label="${esc(this.t('feed.reactions'))}">${REACTIONS.map((r) => `<button type="button" class="mi-r r-${r.id}" data-react="${r.id}" aria-pressed="${mine === r.id}" title="${esc(this.t('react.' + r.id))}">${REACT_ICON[r.id]}<span>${counts[r.id] || ''}</span><em class="sr">${esc(this.t('react.' + r.id))}</em></button>`).join('')}</div>
       ${p.comments.length > 2 && !showAll ? `<button type="button" class="mi-link" data-all="${esc(p.id)}">${esc(this.d.i18n.tn('feed.allComments', p.comments.length))}</button>` : ''}
       <ul class="mi-comments">${comments}</ul>
-      <form class="mi-cform" data-post="${esc(p.id)}"><input name="c" maxlength="${LIMITS.comment}" autocomplete="off" placeholder="${esc(this.t('feed.commentPh'))}" aria-label="${esc(this.t('feed.commentPh'))}"><button type="submit" class="mi-btn">${esc(this.t('feed.send'))}</button></form>`;
+      <form class="mi-cform" data-post="${esc(p.id)}"><input name="c" maxlength="${LIMITS.comment}" autocomplete="off" placeholder="${esc(this.t('feed.commentPh'))}" aria-label="${esc(this.t('feed.commentPh'))}"><button type="submit" class="r-btn sm">${esc(this.t('feed.send'))}</button></form>`;
     return art;
   }
   private loadPhotos(root: ParentNode) {
@@ -146,17 +153,17 @@ export class MIInstagramApp {
   }
   private composeHtml() {
     const d = this.draft;
-    return `<header class="mi-head"><span class="mi-logo">${MIINSTAGRAM_ICON}<b>${esc(this.t('compose.title'))}</b></span><button type="button" class="mi-btn" data-a="cancel">${esc(this.t('compose.cancel'))}</button></header>
+    return `<header class="mi-head"><span class="mi-logo">${MIINSTAGRAM_ICON}<b>${esc(this.t('compose.title'))}</b></span><button type="button" class="r-btn ghost sm" data-a="cancel">${esc(this.t('compose.cancel'))}</button></header>
       <p class="mi-msg" role="status">${esc(this.msg)}</p>
       <div class="mi-compose">
         ${d ? `<div class="mi-photo big"><img src="${d.photo}" alt="${esc(this.t('feed.photoAlt'))}"></div>` : `<div class="mi-pick"><p>${esc(this.t('compose.pick'))}</p></div>`}
         <div class="mi-sources">
-          <button type="button" class="mi-btn" data-a="snap">${esc(this.t('compose.fromRoom'))}</button>
-          ${this.d.openMiifoto ? `<button type="button" class="mi-btn" data-a="miifoto">${esc(this.t('compose.fromMiifoto'))}</button>` : ''}
+          <button type="button" class="r-btn blue" data-a="snap">${esc(this.t('compose.fromRoom'))}</button>
+          ${this.d.openMiifoto ? `<button type="button" class="r-btn purple" data-a="miifoto">${esc(this.t('compose.fromMiifoto'))}</button>` : ''}
         </div>
-        <label class="mi-field"><span>${esc(this.t('compose.caption'))}</span><textarea name="caption" rows="3" maxlength="${LIMITS.caption}">${esc(d?.caption ?? this.captionBuf)}</textarea><small data-count>${(d?.caption ?? this.captionBuf).length}/${LIMITS.caption}</small></label>
-        <button type="button" class="mi-btn main" data-a="publish" ${d && !this.busy ? '' : 'disabled'}>${esc(this.t('compose.publish'))}</button>
-        <p class="mi-hint">${esc(this.t('compose.hint'))}</p>
+        <label class="mi-field r-field"><span>${esc(this.t('compose.caption'))}</span><textarea name="caption" rows="3" maxlength="${LIMITS.caption}">${esc(d?.caption ?? this.captionBuf)}</textarea><small data-count>${(d?.caption ?? this.captionBuf).length}/${LIMITS.caption}</small></label>
+        <button type="button" class="r-btn primary lg" data-a="publish" ${d && !this.busy ? '' : 'disabled'}>${esc(this.t('compose.publish'))}</button>
+        <p class="mi-hint r-note">${esc(this.t('compose.hint'))}</p>
       </div>`;
   }
   private onInput = (e: Event) => {
@@ -174,10 +181,13 @@ export class MIInstagramApp {
     void this.d.svc.comment(id, this.d.me, { text }).then((r) => { inp.disabled = false; if (r.ok) inp.value = ''; else { this.msg = this.err(r.code); this.status(); } });
   };
   private onClick = (e: Event) => {
-    const b = (e.target as HTMLElement).closest<HTMLElement>('[data-a],[data-react],[data-all]'); if (!b || !this.el) return;
+    const b = (e.target as HTMLElement).closest<HTMLElement>('[data-a],[data-react],[data-all],[data-del],[data-delyes],[data-delno]'); if (!b || !this.el) return;
+    if (b.dataset.del) { if (this.d.confirm?.() ?? true) { this.asking = b.dataset.del; this.refreshCard(b.dataset.del); } else void this.remove(b.dataset.del); return; }
+    if (b.dataset.delno) { this.asking = null; this.refreshCard(b.dataset.delno); return; }
+    if (b.dataset.delyes) { void this.remove(b.dataset.delyes); return; }
     if (b.dataset.react) { const card = b.closest<HTMLElement>('.mi-card')!; const id = card.dataset.id!; const r = b.dataset.react as ReactionId; const mine = b.getAttribute('aria-pressed') === 'true';
       void this.d.svc.react(id, this.d.me, mine ? null : r).then((res) => { if (!res.ok) { this.msg = this.err(res.code); this.status(); } }); return; }
-    if (b.dataset.all) { this.open.add(b.dataset.all); const p = this.posts.find((x) => x.id === b.dataset.all); const card = this.el.querySelector(`.mi-card[data-id="${CSS.escape(b.dataset.all)}"]`); if (p && card) { const fresh = this.card(p); card.replaceWith(fresh); this.loadPhotos(fresh); } return; }
+    if (b.dataset.all) { this.open.add(b.dataset.all); this.refreshCard(b.dataset.all); return; }
     const a = b.dataset.a; this.msg = '';
     if (a === 'new') { this.view = 'compose'; this.render(); }
     if (a === 'cancel') { this.view = 'feed'; this.render(); void this.load(); }
@@ -186,6 +196,17 @@ export class MIInstagramApp {
     if (a === 'miifoto' && this.d.openMiifoto) { this.d.closePhone(); this.d.openMiifoto(); }
     if (a === 'publish') void this.publish();
   };
+  private refreshCard(id: string) {
+    const p = this.posts.find((x) => x.id === id), card = this.el?.querySelector(`.mi-card[data-id="${CSS.escape(id)}"]`);
+    if (p && card) { const fresh = this.card(p); card.replaceWith(fresh); this.loadPhotos(fresh); }
+  }
+  /** Deletes an own post (the service refuses other people's posts: FORBIDDEN). */
+  private async remove(id: string) {
+    this.asking = null;
+    const r = await this.d.svc.deletePost(id, this.d.me);
+    this.msg = r.ok ? this.t('feed.deleted') : this.err(r.code);
+    if (r.ok) await this.load(); else { this.refreshCard(id); this.status(); }
+  }
   private async publish() {
     const d = this.draft; if (!d || this.busy) return;
     this.busy = true; this.render();

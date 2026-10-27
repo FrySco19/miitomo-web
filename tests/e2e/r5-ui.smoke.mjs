@@ -110,14 +110,48 @@ await page.click('[data-app=miinstagram]').catch(() => {});   // restoration may
 await page.waitForSelector('.mi-card');
 await page.locator('.mi-card').first().locator('.mi-r.r-wow').click(); await wait(100);
 await page.fill('.mi-cform input >> nth=0', 'Ciao da casa di un amico'); await page.press('.mi-cform input >> nth=0', 'Enter'); await wait(150);
+// R6: deleting an own post asks first (Settings → confirmations, on by default); "keep it" keeps it
+const ownBefore = await ev(() => window.__r5.rt.feed.count);
+await page.locator('.mi-del').first().click(); await page.waitForSelector('.mi-ask');
+await page.click('.mi-ask [data-delno]'); await wait(100);
+expect('R6 delete own post: asks first; "keep it" keeps the post', (await page.locator('.mi-ask').count()) === 0 && (await ev(() => window.__r5.rt.feed.count)) === ownBefore && (await page.locator('.mi-del').count()) >= 1);
 await closePhone();
 const presG2 = await ev((id) => window.__r5.rt.places.get(id).presence().map((p) => p.profileId).sort().join(), open);
 const sG = await S();
 await ev(() => window.__r5.setAuto(true));
 expect('G phone in a friend\'s room: reaction + comment, closed → same room, same presence, same location', sG.at === 'friends' && sG.room === open && presG === presG2 && sG.mode === 'inside', { presG, presG2, sG });
+// R6: leaving asks for a second tap (confirmations on by default)
+await page.click('.pb-bar [data-go=hub]'); await wait(150);
+const armed = await page.locator('.pb-bar [data-go=hub].armed').count(), stillIn = (await S()).room === open;
 await page.click('.pb-bar [data-go=hub]'); await page.waitForFunction(() => window.__r5.rt.hub.at === 'hub');
+expect('R6 leave confirmation: first tap arms the button and stays, second tap leaves', armed === 1 && stillIn);
 const sA4 = await S();
 expect('A4 friend room → Piazza: presence removed, scene emptied', sA4.at === 'hub' && sA4.guests === 0 && sA4.room === null && !(await ev((id) => window.__r5.rt.places.get(id).has('host'), open)), sA4);
+// ---- R6 Settings app (MiiPhone): every control changes the stored record and the running game at once
+await openPhone();
+if (await ev(() => window.__r5.rt.phone.app !== 'home')) await page.click('.mp-back');   // reopening restores the last app
+await page.click('[data-app=settings]'); await page.waitForSelector('.set');
+await shot('r5-ui-06b-settings');
+await page.locator('[data-vol=music]').fill('40'); await wait(50);
+await page.click('[data-set=quality][data-v=low]'); await wait(50);
+await page.selectOption('select[data-set=region]', 'GB'); await wait(50);
+await page.locator('input[data-set=confirm]').click(); await wait(50);
+await page.fill('.set-name input[name=n]', '   '); await page.click('.set-name [type=submit]'); await wait(50);
+const emptyRefused = (await page.locator('.set .r-msg').textContent()).length > 0 && (await ev(() => window.__r5.host.profile().name)) === 'Kelly';
+await page.fill('.set-name input[name=n]', 'Kelly R6'); await page.click('.set-name [type=submit]'); await wait(50);
+const st = await ev(() => ({ vol: window.__r5.host.volumes, q: window.__r5.host.quality, locale: window.__r5.rt.i18n.locale, stored: JSON.parse(localStorage.getItem('mtw.reboot.settings')), name: window.__r5.host.profile().name, motion: document.documentElement.dataset.motion }));
+expect('R6 settings: music 40% → host volume 0.4; quality low → host; region GB → en-GB dates; confirmations off; all stored', Math.abs(st.vol.music - 0.4) < 1e-9 && st.q === 'low' && st.locale === 'en-GB' && st.stored.confirm === false && st.stored.volumes.music === 40 && st.stored.region === 'GB' && st.motion === 'full', st);
+expect('R6 settings: player name — empty refused, a new name saved to the profile', emptyRefused && st.name === 'Kelly R6', st);
+await page.click('[data-set=language][data-v=it]'); await wait(80);
+const itTitle = await page.locator('.mp-title').textContent();
+await page.click('[data-set=language][data-v=en]'); await wait(80);
+expect('R6 settings: language from the Settings app, applied to the phone at once', itTitle === 'Impostazioni' && (await page.locator('.mp-title').textContent()) === 'Settings', itTitle);
+await page.locator('input[data-set=light]').click(); await wait(50);
+const light = await ev(() => ({ q: window.__r5.host.quality, motion: document.documentElement.dataset.motion, gap: window.__r5.rt.places.turnover.gap, posts: window.__r5.rt.feedSim.config.maxPostsPerHour }));
+await page.locator('input[data-set=light]').click(); await page.click('[data-set=quality][data-v=auto]'); await wait(50);
+const unlight = await ev(() => ({ q: window.__r5.host.quality, motion: document.documentElement.dataset.motion, gap: window.__r5.rt.places.turnover.gap, posts: window.__r5.rt.feedSim.config.maxPostsPerHour }));
+expect('R6 light mode: reduced motion, calmer world (arrivals ×2, half the posts); off = back exactly', light.motion === 'reduced' && light.q === 'low' && light.gap[0] === unlight.gap[0] * 2 && light.posts === unlight.posts / 2 && unlight.q === 'high' && unlight.motion === 'full', { light, unlight });
+await closePhone();
 // ---- C: friend room → Casa: complete cleanup
 await ev((id) => window.__r5.rt.hub.go('friends', id), open); await page.waitForFunction(() => window.__r5.rt.visit.mode === 'inside');
 await page.click('.pb-bar [data-go=home]'); await page.waitForFunction(() => window.__r5.rt.hub.at === 'home');
@@ -161,11 +195,17 @@ await page.reload(); await page.waitForFunction(() => document.body.dataset.read
 const after = await ev(() => window.__r5.rt.feed.feed({ limit: 30 }).then((r) => r.value.items.map((p) => ({ id: p.id, r: Object.keys(p.reactions).length, c: p.comments.length }))));
 expect('I persistence: posts, reactions and comments survive a reload', JSON.stringify(after) === JSON.stringify(before) && before.length >= 1, { before, after });
 expect('H3 language kept after reload (English)', (await S()).lang === 'en');
+const st2 = await ev(() => ({ vol: window.__r5.host.volumes, locale: window.__r5.rt.i18n.locale, confirm: window.__r5.rt.settings.value.confirm }));
+expect('R6 settings kept after reload and applied at start (volume, region, confirmations)', Math.abs(st2.vol.music - 0.4) < 1e-9 && st2.locale === 'en-GB' && st2.confirm === false, st2);
 await openPhone();
 await page.click('[data-app=miinstagram]').catch(() => {});
 await page.waitForSelector('.mi-card img', { timeout: 5000 }).catch(() => {});
 expect('I photo of the post still there after reload (IndexedDB)', await page.locator('.mi-card img').count() >= 1);
 await shot('r5-ui-10-after-reload-en');
+// R6: with confirmations off, deleting an own post is immediate; the feed and the store agree
+const nDel = await ev(() => window.__r5.rt.feed.count);
+await page.locator('.mi-del').first().click(); await page.waitForFunction((n) => window.__r5.rt.feed.count === n - 1, nDel, { timeout: 3000 }).catch(() => {});
+expect('R6 delete own post (confirmations off): removed at once', (await ev(() => window.__r5.rt.feed.count)) === nDel - 1, { nDel });
 await closePhone();
 // ---- responsive: tablet + phone
 for (const [name, vw, vh] of [['tablet', 820, 1180], ['phone', 390, 844]]) {

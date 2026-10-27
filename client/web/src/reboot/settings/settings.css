@@ -1,0 +1,14 @@
+/* REBOOT R6.0 — the Settings app on the design tokens. */
+.set-card { display: grid; gap: var(--r-s3); padding: var(--r-s3) var(--r-s3) var(--r-s4); }
+.set-row { display: flex; align-items: center; justify-content: space-between; gap: var(--r-s3); font-size: var(--r-fs-md); }
+.set-row.col { flex-direction: column; align-items: stretch; gap: var(--r-s2); }
+.set-row > span:first-child { color: var(--r-ink); }
+.set-lbl { display: grid; gap: 2px; min-width: 0; }
+.set-lbl b { font-weight: var(--r-fw); color: var(--r-ink); }
+.set-lbl small { font-size: var(--r-fs-xs); color: var(--r-ink-3); line-height: 1.35; }
+.set-inline { display: flex; gap: var(--r-s2); align-items: center; }
+.set-inline input { flex: 1; min-width: 0; }
+.set-vol { display: grid; grid-template-columns: 7.5em 1fr 3.2em; align-items: center; gap: var(--r-s2); font-size: var(--r-fs-sm); color: var(--r-ink); }
+.set-vol output { text-align: right; color: var(--r-ink-2); font-variant-numeric: tabular-nums; }
+.set-foot { display: grid; justify-items: center; gap: var(--r-s1); padding-top: var(--r-s2); }
+.set .r-msg:empty { display: none; }

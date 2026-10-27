@@ -60,13 +60,16 @@ const families: Record<string, string[]> = {
   'game.unavailable.': ['NOT_ENOUGH_DATA', 'NOT_ENOUGH_PLAYERS'], 'hub.open.': ['ALREADY_OPEN', 'NOT_IN_ROOM', 'GUESTS_IN', 'REFUSED'],
   'react.': ['like', 'haha', 'wow', 'cute'], 'feed.kind.': ['photo', 'activity', 'answer'], 'role.': ['owner', 'moderator', 'visitor'], 'personality.': ['0', '1', '2', '3'],
   'pb.denied.': ['useObjects', 'interact', 'kick', 'changeSettings', 'close', 'invite', 'enter'], 'act.': ['meet', 'game.win', 'game.lost', 'visit'], 'reward.': ['quiz-star'], 'lang.': ['en', 'it', 'label'],
+  // R6 Settings
+  'set.': ['language', 'region', 'quality', 'motion', 'light', 'confirm', 'notifications'], 'set.vol.': ['music', 'effects', 'voice'],
+  'set.q.': ['auto', 'high', 'balanced', 'low'], 'set.m.': ['system', 'full', 'reduced'],
 };
 const famMissing = Object.entries(families).flatMap(([p, ks]) => ks.map((k) => p + k)).filter((k) => !(k in STRINGS.en));
 const cm = [0, 1, 2, 3].flatMap((p) => ['photo', 'activity', 'answer'].flatMap((k) => [0, 1, 2].map((n) => `cm.${p}.${k}.${n}`))).filter((k) => !(k in STRINGS.en));
 ok('code: every dynamic key family is complete (errors, statuses, reactions, comments by personality…)', !famMissing.length && !cm.length, { famMissing, cm });
 const branches = code.filter(([f, t]) => !f.startsWith('i18n') && /(lang|language)\s*===\s*['"](en|it)['"]/.test(t)).map(([f]) => f);
 ok('code: no `if (language === …)` branches outside the i18n module', !branches.length, branches);
-const r5 = ['places', 'games', 'phone', 'miinstagram'];
+const r5 = ['places', 'games', 'phone', 'miinstagram', 'settings'];
 const hard = code.filter(([f]) => r5.some((d) => f.startsWith(d))).flatMap(([f, t]) => [...t.matchAll(/innerHTML\s*=\s*`[^`]*>([A-Za-zÀ-ÿ][A-Za-zÀ-ÿ ,'!]{6,})</g)].map((m) => `${f}: ${m[1]}`));
-ok('code: no hard-coded sentences in the new R5 views (texts come from i18n)', !hard.length, hard);
+ok('code: no hard-coded sentences in the new R5 / R6 views (texts come from i18n)', !hard.length, hard);
 if (fails) { console.log(`${fails} FAILED`); process.exit(1); } else { console.log('ALL PASS'); process.exit(0); }
