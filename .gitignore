@@ -79,3 +79,6 @@ desktop.ini
 .vscode/
 *.swp
 *~
+
+# Desktop app build output
+desktop/release/

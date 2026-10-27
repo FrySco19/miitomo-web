@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:">
+<title>Miitomo Web</title>
+<link rel="stylesheet" href="login.css">
+</head>
+<body>
+<div class="bg" aria-hidden="true">
+  <div class="sky"></div>
+  <div class="bubbles"></div>
+  <div class="crowd"></div>
+</div>
+<main class="card" aria-labelledby="t">
+  <h1 id="t">Miitomo <span>Web</span></h1>
+  <p class="sub" data-i="sub"></p>
+  <div class="tabs" role="tablist">
+    <button type="button" role="tab" data-tab="login" aria-selected="true" data-i="login"></button>
+    <button type="button" role="tab" data-tab="register" aria-selected="false" data-i="register"></button>
+  </div>
+  <form id="f" autocomplete="off" novalidate>
+    <label><span data-i="user"></span><input name="u" maxlength="16" autocomplete="username" required list="known"></label>
+    <datalist id="known"></datalist>
+    <label><span data-i="pass"></span><input name="p" type="password" maxlength="200" autocomplete="current-password" required></label>
+    <label class="reg"><span data-i="pass2"></span><input name="p2" type="password" maxlength="200" autocomplete="new-password"></label>
+    <p class="msg" role="status"></p>
+    <button type="submit" class="go"></button>
+  </form>
+  <p class="note" data-i="note"></p>
+</main>
+<script src="login.js"></script>
+</body>
+</html>

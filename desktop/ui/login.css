@@ -1,0 +1,38 @@
+/* Desktop login: the Reboot design tokens, an animated background drawn in CSS (no images, no Nintendo assets). */
+:root { --cream: #fffaf4; --ink: #3b3530; --ink2: #6b6058; --accent: #cc4b12; --accent-hi: #ff7a2f; --danger: #b23a1e; --line: #f1e3d4;
+  font-family: ui-rounded, "Nunito", "Segoe UI", system-ui, sans-serif; color: var(--ink); }
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; overflow: hidden; background: #ffe9d4; }
+body { display: grid; place-items: center; }
+.bg { position: fixed; inset: 0; overflow: hidden; }
+.sky { position: absolute; inset: 0; background: radial-gradient(120% 90% at 50% 0%, #fff 0%, #ffeedd 45%, #ffd7b3 100%); }
+.bubbles i { position: absolute; bottom: -80px; border-radius: 22px 22px 22px 6px; background: #fff; box-shadow: 0 4px 0 rgba(160, 90, 40, .12); opacity: .85; animation: rise linear infinite; }
+.bubbles i::after { content: ''; position: absolute; left: 16%; top: 38%; width: 68%; height: 8px; border-radius: 4px; background: #ffd9b8; box-shadow: 0 14px 0 #ffe7d2; }
+@keyframes rise { to { transform: translateY(calc(-100vh - 160px)) rotate(var(--r, 6deg)); } }
+.crowd { position: absolute; left: 0; right: 0; bottom: 0; height: 30vh; display: flex; justify-content: space-around; align-items: flex-end; }
+.crowd b { position: relative; width: 70px; height: 120px; animation: bob 2.6s ease-in-out infinite; animation-delay: var(--d); }
+.crowd b::before { content: ''; position: absolute; left: 10px; top: 0; width: 50px; height: 54px; border-radius: 46% 46% 44% 44%; background: #ffdcbc; box-shadow: inset 0 -5px 0 rgba(0, 0, 0, .05); }
+.crowd b::after { content: ''; position: absolute; left: 5px; bottom: 0; width: 60px; height: 64px; border-radius: 26px 26px 10px 10px; background: var(--c); }
+.crowd b i { position: absolute; z-index: 1; top: 22px; left: 22px; width: 5px; height: 8px; border-radius: 3px; background: var(--ink); box-shadow: 21px 0 0 var(--ink); animation: blink 4s infinite; animation-delay: var(--d); }
+@keyframes bob { 50% { transform: translateY(-10px) rotate(-2deg); } }
+@keyframes blink { 0%, 92%, 100% { transform: scaleY(1); } 95% { transform: scaleY(.1); } }
+@media (prefers-reduced-motion: reduce) { .bubbles i, .crowd b, .crowd b i { animation: none; } }
+.card { position: relative; width: min(420px, calc(100vw - 32px)); padding: 28px 28px 20px; border-radius: 28px; background: var(--cream); box-shadow: 0 6px 0 rgba(150, 80, 30, .14), 0 24px 60px rgba(120, 60, 20, .2); }
+h1 { margin: 0; text-align: center; font-size: 34px; color: var(--accent); letter-spacing: .01em; }
+h1 span { color: var(--ink); font-weight: 600; }
+.sub { margin: 4px 0 18px; text-align: center; color: var(--ink2); font-size: 14px; }
+.tabs { display: flex; gap: 4px; padding: 4px; border-radius: 999px; background: #f4ece4; margin-bottom: 16px; }
+.tabs button { flex: 1; border: 0; border-radius: 999px; padding: 9px; font: inherit; font-weight: 700; font-size: 14px; color: var(--ink2); background: transparent; cursor: pointer; }
+.tabs button[aria-selected="true"] { background: #fff; color: var(--accent); box-shadow: 0 2px 0 rgba(60, 40, 20, .14); }
+form { display: grid; gap: 12px; }
+label { display: grid; gap: 4px; font-size: 13px; color: var(--ink2); }
+input { border: 2px solid var(--line); border-radius: 14px; padding: 10px 12px; font: inherit; font-size: 16px; color: var(--ink); background: #fff; }
+input:focus { outline: none; border-color: #2aa5c9; }
+.reg { display: none; }
+form.register .reg { display: grid; }
+.msg { min-height: 1.2em; margin: 0; color: var(--danger); font-size: 13px; font-weight: 700; }
+.go { border: 0; border-radius: 999px; padding: 13px; font: inherit; font-size: 16px; font-weight: 800; color: #fff; background: var(--accent); box-shadow: 0 4px 0 #9e3a0d; cursor: pointer; }
+.go:active { transform: translateY(3px); box-shadow: none; }
+.go:disabled { opacity: .55; cursor: wait; }
+.note { margin: 14px 0 0; text-align: center; font-size: 12px; line-height: 1.4; color: #7a6f66; }
+:focus-visible { outline: 3px solid #2aa5c9; outline-offset: 2px; }
