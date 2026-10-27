@@ -27,7 +27,7 @@ const kv = () => { const m = new Map<string, string>(); return { getItem: (k: st
   ok('flags: master off → every flag off', FLAGS.every((f) => off.on(f.id) === false));
   const on = new RebootFlags(true, s);
   ok('flags: master on → REBOOT + implemented MULTI_MII on by default', on.on('REBOOT_ENABLED') && on.on('MULTI_MII_ENABLED'));
-  ok('flags: not-implemented features are never effective (even if stored on)', (on.set('MIINSTAGRAM_ENABLED', true), !on.on('MIINSTAGRAM_ENABLED')) && !on.on('EVENTS_ENABLED'));
+  ok('flags: not-implemented features are never effective (even if stored on)', (on.set('EVENTS_ENABLED', true), !on.on('EVENTS_ENABLED')) && !on.on('NOTIFICATIONS_ENABLED'));
   on.set('MULTI_MII_ENABLED', false);
   ok('flags: persisted per browser', new RebootFlags(true, s).on('MULTI_MII_ENABLED') === false);
   ok('flags: all 10 requested flags declared', ['REBOOT_ENABLED', 'MIINSTAGRAM_ENABLED', 'PUBLIC_ROOMS_ENABLED', 'MINIGAMES_ENABLED', 'EVENTS_ENABLED', 'NOTIFICATIONS_ENABLED', 'MULTI_MII_ENABLED', 'HUB_ENABLED', 'REWARDS_ENABLED', 'MIIFOTO2_ENABLED'].every((id) => FLAGS.some((f) => f.id === id)));

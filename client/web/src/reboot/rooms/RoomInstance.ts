@@ -44,11 +44,14 @@ export class RoomInstance {
     return true;
   }
 
-  /** Owner opens the room: the owner is present, visitors may come. */
-  open(by: Id, now = () => new Date().toISOString()): Result<RoomInfo> {
+  /**
+   * Owner opens the room: the owner is present, visitors may come. R5: a place nobody owns as a Mii (the Sala Giochi,
+   * owned by the system) opens with `ownerInside: false`.
+   */
+  open(by: Id, now = () => new Date().toISOString(), opts: { ownerInside?: boolean } = {}): Result<RoomInfo> {
     if (by !== this.info.ownerId) return fail('FORBIDDEN', 'Solo il proprietario apre la stanza.');
     this.isOpen = true;
-    if (!this.present.has(by)) this.present.set(by, this.pres(by, 'owner', now));
+    if (opts.ownerInside !== false && !this.present.has(by)) this.present.set(by, this.pres(by, 'owner', now));
     return { ok: true, value: this.info };
   }
   /** Owner closes: everybody but the owner is removed (returned so the caller can see them out). */

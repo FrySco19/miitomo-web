@@ -4,7 +4,11 @@
  * and passes it to bootReboot(). Adding a capability for Reboot = adding a method here (reviewable in one place).
  */
 export interface GuestInfo { id: string; name: string; state: string; leaving: boolean; }
-export interface FriendInfo { id: string; name: string; }
+/** Local friend. R5 adds what Reboot places need: personality type (0..3), room look, birthday and goIn greeting. */
+export interface FriendInfo { id: string; name: string; personality?: 0 | 1 | 2 | 3; room?: RoomSkin; birthday?: { month: number; day: number } | null; greeting?: string; }
+export interface RoomSkin { wall: string; floor: string; variant: number; }
+/** R5: a Reboot place shown with the room engine (a friend's room, the Sala Giochi). */
+export interface PlaceScene { id: string; skin: RoomSkin; /** personality type of the resident (friend-room music), null = none */ friendHost: number | null; }
 
 export interface RebootHost {
   /** Element the Reboot UI mounts into (above the 3D view). */
@@ -17,7 +21,8 @@ export interface RebootHost {
   friends(): Promise<FriendInfo[]>;
   /** Room guests (shared multi-Mii machinery). */
   guests(): GuestInfo[];
-  invite(id: string): Promise<boolean>;
+  /** A friend's Mii comes in through the door, or (R5, `inside`) is already in the room at that spot (no door). */
+  invite(id: string, opts?: { inside?: { x: number; z: number } }): Promise<boolean>;
   dismiss(id: string): boolean;
   capacity(): number;
   setCapacity(n: number): number;
@@ -49,6 +54,26 @@ export interface RebootHost {
   onSpeech(cb: (e: { speaker: string | null }) => void): () => void;
   /** The player acted on the room: tapped a Mii, the floor, an object, the door ('host' = the user's Mii). */
   onPlayer(cb: (e: { id: string; kind: string }) => void): () => void;
+
+  // ---- R5: places, photos, the user's profile (each one a thin call into the existing Play / room machinery) ----
+  /** The user's own Mii (name, personality type, birthday). */
+  profile(): { name: string; personality: 0 | 1 | 2 | 3; birthday: { month: number; day: number } | null; greeting: string };
+  /** Goes to a Reboot place: the room engine shows `skin`, the user's Mii comes in through the door. Screen = 'place:<id>'. */
+  visitPlace(p: PlaceScene): boolean;
+  /** Back to the user's own room (the Mii comes in again). */
+  returnHome(): void;
+  /** Every guest leaves the scene at once (the user is changing place). */
+  clearGuests(): void;
+  /** Wall / floor ids available on this device, and the user's own room look. */
+  roomSkins(): { walls: string[]; floors: string[]; own: RoomSkin };
+  /** Player taps on objects: null = always allowed; otherwise asked first (room permissions of a visited room). */
+  setObjectPolicy(p: ((object: string) => boolean) | null): void;
+  /** Square JPEG of what the room camera sees right now (Miifoto 2 "photo of the room"); null when no room is shown. */
+  snapshot(size: number): string | null;
+  /** Adds a "share" action to the Miifoto screen (Classic has none): the composed photo as a JPEG data URL. */
+  setPhotoShare(p: { label: () => string; share: (dataUrl: string) => void } | null): void;
+  /** Opens the (Classic) Miifoto screen. */
+  openMiifoto(): void;
 }
 
 export interface MiiView {

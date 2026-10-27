@@ -145,11 +145,27 @@ have a few tone variants. Original greetings (MSBT tags 1.2–1.5) stay in the C
 
 Both have a regression test in `tests/unit/social.test.mts`.
 
+### R5 additions (no second social life)
+
+R5 builds on the same `SocialLife`; every addition is off unless a caller uses it, and the R2b tests are unchanged.
+
+| Addition | What it does | Used by |
+|---|---|---|
+| `subscribe()` → `convo.start` / `convo.end` (who, why, lines) | Read-only lifecycle facts | relations, MIInstagram moments |
+| `reserve(ids, owner)` / `release(owner, only?)` | Another activity owns these Miis (between the player and the door in priority): their conversation ends politely, their activity is suspended and resumed on release; they neither glance nor get picked as partners | Sala Giochi players |
+| `setAttraction(point)` | Idle Miis may walk up to a point of interest and watch it | a match in progress |
+| `setAffinity(fn)` | Partner choice weighted by closeness (× 0.6 … 1.6) | relations (friends talk more) |
+
+In a visited room the policy for objects is the visited room's, and the user's Mii is still moved only by the player.
+
+The "tap on the last line" fix of 2026-10-27 was re-checked in R5 over 14 seeds (regression test in
+`social.test.mts`): the conversation always pauses and resumes the same line.
+
 ### Not done yet (documented, intentionally minimal)
 
 - **No head-only look-at.** The skeleton supports it, but there is no head IK; glances turn the whole body.
-- **Lines are generic.** They do not yet use the friends' own words (their greetings or "Rispondono tutti"
-  answers). That needs the answer data from R5.
+- **Lines are generic and Italian.** They do not yet use the friends' own words, and the chat lines of R2b are not in
+  the R5 i18n table yet (they are spoken in the room balloon with the Classic text system).
 - **No three-way conversations.** Bystanders only watch.
 - **The user's Mii never walks autonomously.** This is a design choice: only the player moves it.
 

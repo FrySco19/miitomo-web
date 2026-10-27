@@ -764,7 +764,7 @@ function arrivalSpot(): THREE.Vector3 {
   for (let i = 0; i < 24; i++) { const q = director!.clampToRoom(new THREE.Vector3(-26 + Math.random() * 52, 0, -20 + Math.random() * 46)); if (taken.every((t) => q.distanceTo(t) >= RoomDirector.PERSONAL + 0.5)) return q; }
   return director!.clampToRoom(new THREE.Vector3(8, 0, 4));
 }
-async function guestArrive(sp: GuestSpec): Promise<boolean> {
+async function guestArrive(sp: GuestSpec, opts?: { inside?: { x: number; z: number } }): Promise<boolean> {
   const full = () => guests.length >= guestCap || guests.some((g) => g.spec.id === sp.id);
   if (full() || !room || !director || ui.scene !== 'room' || venue !== 'room' || !engine.ready) return false;
   const keys = Object.entries(sp.outfit).filter(([k, v]) => k !== 'tuck' && v).map(([c, v]) => `asset/model/character/${CAT_DIR[c as Category]}/output/${CAT_DIR[c as Category]}${(v as { id: string }).id}`);
@@ -796,7 +796,14 @@ async function guestArrive(sp: GuestSpec): Promise<boolean> {
   gd.onEvent = (e) => onGuestEvent(g, e);
   linkOthers();
   built.slot.root.visible = false;
-  if (doorBusy() || waiting.length) { waiting.push({ g, spot: null }); glog(`in attesa della porta ${sp.name}`); }
+  if (opts?.inside) {
+    // REBOOT places (R5): somebody who was already in that room (the resident, earlier visitors) — no door, no greeting
+    const at = director.clampToRoom(new THREE.Vector3(opts.inside.x, 0, opts.inside.z));
+    gd.restore(at, Math.atan2(-at.x, 12 - at.z));
+    glog(`già dentro ${sp.name}`);
+    emitGuest({ type: 'arrive', id: sp.id, name: sp.name });
+    roomBgm();
+  } else if (doorBusy() || waiting.length) { waiting.push({ g, spot: null }); glog(`in attesa della porta ${sp.name}`); }
   else startArrival(g);
   return true;
 }
@@ -960,6 +967,18 @@ function roomPick(cx: number, cy: number): Pick {
 }
 
 /** Click: Mii -> reaction + talk; door -> exit/enter; interactive object -> walk + use it; furniture / floor -> walk. */
+/** REBOOT (visited rooms): may the player use this object? null = always (Classic). */
+let objectPolicy: ((name: string) => boolean) | null = null;
+/** REBOOT Miifoto 2: square JPEG of the current room view (the WebGL buffer is preserved). */
+function snapshot(size: number): string | null {
+  if (!room || !director || ui.scene !== 'room' || venue !== 'room') return null;
+  roomTick(0);
+  const s = Math.min(canvas.width, canvas.height); if (!s) return null;
+  const out = document.createElement('canvas'); out.width = out.height = Math.max(64, Math.min(1024, Math.round(size)));
+  const c = out.getContext('2d')!; c.fillStyle = '#fff'; c.fillRect(0, 0, out.width, out.height);
+  c.drawImage(canvas, (canvas.width - s) / 2, (canvas.height - s) / 2, s, s, 0, 0, out.width, out.height);
+  try { return out.toDataURL('image/jpeg', 0.85); } catch { return null; }
+}
 function roomClick(cx: number, cy: number): string {
   if (!room || !director || closetCam.on || venue === 'shop') return 'none';
   const p = roomPick(cx, cy);
@@ -969,7 +988,7 @@ function roomClick(cx: number, cy: number): string {
     case 'door': director.state === 'outside' ? director.enter() : director.exit(); return 'door';
     case 'mii': director.touch(); return 'mii';
     case 'guest': { const g = guests.find((x) => x.spec.id === p.guestId); if (g && !g.leaving) g.director.touch(); return 'guest'; }   // SequenceTouch on the friend (DEDUCED)
-    case 'object': director.interact(p.obj!); return 'object:' + p.name;
+    case 'object': if (objectPolicy && !objectPolicy(p.name)) return 'object-denied:' + p.name; director.interact(p.obj!); return 'object:' + p.name;
     case 'furniture': director.goTo(new THREE.Vector3(p.point!.x, 0, p.point!.z)); return 'furniture:' + p.name;
     case 'floor': director.goTo(p.point!); return 'floor';
   }
@@ -1444,7 +1463,7 @@ const playApi: PlayApi = {
   renderMiiPhoto: (p) => renderMiiPhoto(p),
   setMiiExpression: (n) => { if (ui.expression !== n) { ui.expression = n; } },
   enterFresh: () => { forceEnter = true; },
-  guestArrive: (sp) => guestArrive(sp),
+  guestArrive: (sp, o) => guestArrive(sp, o),
   guestLeave: (id?: string) => guestLeave(id ? guests.find((g) => g.spec.id === id) : undefined),
   guestEnd: (id?: string) => disposeGuest(id ? guests.find((g) => g.spec.id === id) : undefined),
   guestState: (id?: string) => { const g = id ? guests.find((x) => x.spec.id === id) : guests[0]; return g ? { id: g.spec.id, name: g.spec.name, state: g.director.state, leaving: g.leaving } : null; },
@@ -1482,9 +1501,9 @@ if (REBOOT_ON && play) {
     root: canvas.parentElement!,
     screen: () => play.currentScreen,
     visiting: () => play.isVisiting,
-    friends: async () => (await play.social.list()).map((f) => ({ id: f.id, name: f.profile.name })),
+    friends: async () => (await play.social.list()).map((f) => ({ id: f.id, name: f.profile.name, personality: personalityType(f.profile.personality), room: { ...f.room }, birthday: f.profile.birthday ? { ...f.profile.birthday } : null, greeting: f.profile.greetings.goIn })),
     guests: () => playApi.guestsState(),
-    invite: (id) => play.inviteGuest(id),
+    invite: (id, o) => play.inviteGuest(id, 0, o),
     dismiss: (id) => playApi.guestLeave(id),
     capacity: () => playApi.guestCapacity(),
     setCapacity: (n) => playApi.setGuestCapacity(n),
@@ -1502,6 +1521,16 @@ if (REBOOT_ON && play) {
     onTick: (cb) => { tickListeners.add(cb); return () => tickListeners.delete(cb); },
     onSpeech: (cb) => { speechListeners.add(cb); return () => speechListeners.delete(cb); },
     onPlayer: (cb) => { playerListeners.add(cb); return () => playerListeners.delete(cb); },
+    // R5: places, photos, profile
+    profile: () => ({ name: play.save.profile.name || lastName || 'Mii', personality, birthday: play.save.profile.birthday ? { ...play.save.profile.birthday } : null, greeting: play.save.profile.greetings.goIn }),
+    visitPlace: (p) => play.visitPlace(p.id, p.skin, p.friendHost),
+    returnHome: () => play.startRoom(true),
+    clearGuests: () => disposeGuest(),
+    roomSkins: () => ({ ...roomSkins(), own: { ...play.save.room } }),
+    setObjectPolicy: (p) => { objectPolicy = p; },
+    snapshot: (size) => snapshot(size),
+    setPhotoShare: (p) => { play.photoShare = p; },
+    openMiifoto: () => { void play.openMiifoto(); },
   };
   import('./reboot/index').then((m) => { reboot = m.bootReboot(host); }).catch((e) => console.warn('Reboot non caricato (Classic continua):', e));
 }

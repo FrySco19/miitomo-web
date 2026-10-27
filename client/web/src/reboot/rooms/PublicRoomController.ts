@@ -10,6 +10,7 @@ import type { MultiMii } from '../multimii/MultiMii';
 import type { SocialLife } from '../social/SocialLife';
 import { LocalRoomService, RoomEvent, OWNER } from './LocalRoomService';
 import { LocalVisitors, VisitConfig } from './LocalVisitors';
+import { SceneBinding } from './SceneBinding';
 
 export type PublicMode = 'private' | 'public' | 'closing';
 
@@ -19,12 +20,15 @@ export class PublicRoomController {
   readonly visitors: LocalVisitors;
   private unsubs: (() => void)[] = [];
   private watch = 0;
-  private dismissing = new Set<string>();
-  /** Visitors admitted by the room whose Mii could not come in yet (the scene still holds a Mii on its way out). */
-  private pending = new Map<string, number>();
-  private clock = 0;
+  /** Presence ↔ scene (shared with the rooms the user visits, R5). */
+  private scene: SceneBinding;
   constructor(private host: RebootHost, readonly svc: LocalRoomService, private opts: { multi: MultiMii | null; social: SocialLife | null; visits?: Partial<VisitConfig>; seed?: number }) {
     this.visitors = new LocalVisitors(host, svc, opts.visits, opts.seed);
+    this.scene = new SceneBinding(host, {
+      present: (id) => this.room.has(id),
+      accepting: () => this.mode === 'public',
+      giveUp: (id) => { this.note('invite-failed', id); this.svc.leaveAs(id); },
+    });
   }
   private subs = new Set<(e: { type: string; id?: string; info?: string; mode: PublicMode }) => void>();
   /** Lifecycle events of the public room (open / closing / closed / owner-left / join / leave / kick / denied...). */
@@ -36,16 +40,19 @@ export class PublicRoomController {
   }
   get room() { return this.svc.room; }
   /** Admitted visitors whose Mii is not on screen yet (waiting for a free place in the scene). */
-  get pendingIds() { return [...this.pending.keys()]; }
+  get pendingIds() { return this.scene.pendingIds; }
   get isPublic() { return this.mode !== 'private'; }
 
-  /** Open the user's room to visitors. Refused while visiting someone / outside the room, or with guests already in. */
-  open(): { ok: boolean; reason?: string } {
-    if (this.mode !== 'private') return { ok: false, reason: 'già aperta' };
-    if (this.host.screen() !== 'room' || this.host.visiting()) return { ok: false, reason: 'Apri la stanza pubblica dalla tua stanza.' };
-    if (this.host.guests().length) return { ok: false, reason: 'Prima congeda gli ospiti della stanza privata.' };
+  /**
+   * Open the user's room to visitors. Refused while visiting someone / outside the room, or with guests already in.
+   * `code` (R5) lets a translated UI explain the refusal; `reason` stays the Italian R3 text.
+   */
+  open(): { ok: boolean; reason?: string; code?: 'ALREADY_OPEN' | 'NOT_IN_ROOM' | 'GUESTS_IN' | 'REFUSED' } {
+    if (this.mode !== 'private') return { ok: false, reason: 'già aperta', code: 'ALREADY_OPEN' };
+    if (this.host.screen() !== 'room' || this.host.visiting()) return { ok: false, reason: 'Apri la stanza pubblica dalla tua stanza.', code: 'NOT_IN_ROOM' };
+    if (this.host.guests().length) return { ok: false, reason: 'Prima congeda gli ospiti della stanza privata.', code: 'GUESTS_IN' };
     void this.host.friends().then((fr) => this.svc.setFriends(fr.map((f) => f.id)));
-    const r = this.svc.open(); if (!r.ok) return { ok: false, reason: r.error.message };
+    const r = this.svc.open(); if (!r.ok) return { ok: false, reason: r.error.message, code: 'REFUSED' };
     this.mode = 'public';
     this.host.setCapacity(this.room.info.capacity - 1);
     this.opts.social?.setPolicy({ canUseObject: (id, obj) => this.canUseObject(id, obj) });
@@ -60,7 +67,7 @@ export class PublicRoomController {
   close(): void {
     if (this.mode !== 'public') return;
     this.mode = 'closing';
-    this.pending.clear();
+    this.scene.clear();
     this.visitors.stop();
     this.svc.close();                                  // presence.leave for everyone → polite exits (onRoom)
     this.note('closing');
@@ -85,43 +92,31 @@ export class PublicRoomController {
     if (e.type === 'presence.join') {
       const id = e.presence.profileId;
       this.note('join', id);
-      this.bringIn(id);
+      this.scene.bringIn(id);
     } else if (e.type === 'presence.leave') {
       this.visitors.forget(e.profileId);
       this.note('leave', e.profileId);
-      if (this.host.guests().some((g) => g.id === e.profileId && !g.leaving)) { this.dismissing.add(e.profileId); this.host.dismiss(e.profileId); }
+      this.scene.sendOut(e.profileId);
     } else if (e.type === 'room.denied') this.note('denied', e.profileId, `${e.action}:${e.code}`);
-  }
-  /** Brings an admitted visitor's Mii in; if the scene is momentarily full (Miis still walking out), retry shortly. */
-  private bringIn(id: string) {
-    if (this.mode !== 'public' || !this.room.has(id)) { this.pending.delete(id); return; }
-    void this.host.invite(id).then((ok) => {
-      if (ok) { this.pending.delete(id); if (!this.room.has(id) || this.mode !== 'public') this.host.dismiss(id); return; }   // closed meanwhile
-      if (!this.room.has(id) || this.mode !== 'public') { this.pending.delete(id); return; }
-      if (!this.pending.has(id)) this.pending.set(id, this.clock);
-      if (this.clock - this.pending.get(id)! > 30) { this.pending.delete(id); this.note('invite-failed', id); this.svc.leaveAs(id); }
-    });
   }
   /** A guest left the scene by itself (or the scene removed it): the presence follows. */
   private onGuestLeft(id: string) {
-    this.dismissing.delete(id);
-    if (this.room.has(id) && id !== OWNER && !this.pending.has(id)) { this.visitors.forget(id); this.svc.leaveAs(id); }
-    if (this.mode === 'public') for (const p of [...this.pending.keys()]) this.bringIn(p);      // a place freed up in the scene
+    if (this.scene.guestLeft(id) && id !== OWNER) { this.visitors.forget(id); this.svc.leaveAs(id); }
+    if (this.mode === 'public') this.scene.retry();      // a place freed up in the scene
     if (this.mode === 'closing') this.check();
   }
   /** Once a second while public: leaving the room screen ends the public room at once; a finished close cleans up. */
   private check() {
-    this.clock++;
-    if (this.mode === 'public') for (const p of [...this.pending.keys()]) this.bringIn(p);
-    if (this.mode === 'closing') for (const g of this.host.guests()) if (!g.leaving) this.host.dismiss(g.id);   // late arrivals go too
+    this.scene.tick();
+    if (this.mode === 'closing') this.scene.dismissAll();   // late arrivals go too
     const away = this.host.screen() !== 'room' || this.host.visiting();
-    if (this.mode === 'public' && away) { this.note('owner-left'); this.mode = 'closing'; this.pending.clear(); this.visitors.stop(); this.svc.close(); }
+    if (this.mode === 'public' && away) { this.note('owner-left'); this.mode = 'closing'; this.scene.clear(); this.visitors.stop(); this.svc.close(); }
     if (this.mode === 'closing' && (away || !this.host.guests().length)) this.finish();
   }
   private finish() {
     for (const u of this.unsubs) u(); this.unsubs = [];
     clearInterval(this.watch); this.watch = 0;
-    this.visitors.stop(); this.dismissing.clear(); this.pending.clear();
+    this.visitors.stop(); this.scene.clear();
     this.opts.social?.setPolicy(null);
     this.opts.social?.resync();
     this.host.setCapacity(this.opts.multi ? this.opts.multi.settings.miis - 1 : 1);

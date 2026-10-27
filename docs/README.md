@@ -47,9 +47,13 @@
 |---|---|
 | [reboot/SOCIAL.md](reboot/SOCIAL.md) | R2 several Miis, R2b social life |
 | [reboot/PUBLIC-ROOMS.md](reboot/PUBLIC-ROOMS.md) | R3 public room |
-| [reboot/SOCIAL-HUB.md](reboot/SOCIAL-HUB.md) | R4 social hub "Piazza" |
+| [reboot/SOCIAL-HUB.md](reboot/SOCIAL-HUB.md) | R4 social hub "Piazza" (+ R5 places) |
+| [reboot/FRIEND-ROOMS.md](reboot/FRIEND-ROOMS.md) | R5 friends' rooms (the visited side of R3) |
+| [reboot/GAME-ROOM.md](reboot/GAME-ROOM.md) | R5 Sala Giochi, game model, Quiz dei Mii |
+| [reboot/MIIPHONE.md](reboot/MIIPHONE.md) · [reboot/MIINSTAGRAM.md](reboot/MIINSTAGRAM.md) | R5 MiiPhone and MIInstagram |
+| [reboot/I18N.md](reboot/I18N.md) | R5 English + Italiano |
 | [reboot/SERVER.md](reboot/SERVER.md) | Planned own backend (R10); contracts already in the client |
-| [reboot/MIINSTAGRAM.md](reboot/MIINSTAGRAM.md) · [reboot/MINIGAMES.md](reboot/MINIGAMES.md) · [reboot/EVENTS.md](reboot/EVENTS.md) · [reboot/REWARDS.md](reboot/REWARDS.md) · [reboot/NOTIFICATIONS.md](reboot/NOTIFICATIONS.md) | Planned phases (design notes only) |
+| [reboot/MINIGAMES.md](reboot/MINIGAMES.md) · [reboot/EVENTS.md](reboot/EVENTS.md) · [reboot/REWARDS.md](reboot/REWARDS.md) · [reboot/NOTIFICATIONS.md](reboot/NOTIFICATIONS.md) | Planned phases (design notes only) |
 
 ## Material that is not published
 

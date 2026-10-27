@@ -152,6 +152,30 @@ const flush = () => new Promise((r) => setTimeout(r, 0));
   ok('tap on the last line (engine order) pauses the conversation and resumes the same line', !!t && !!pause && !!resume, { t, pause, resume });
   s.dispose();
 }
+// …and the same regression over many seeds (R5 re-check: no intermittent end instead of pause)
+{
+  let runs = 0, good = 0; const bad: unknown[] = [];
+  for (const seed of [3, 5, 7, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53]) {
+    const h = new FakeHost(3, [3, 2, 1]);
+    const s = new SocialLife(h as any, seed);
+    let tapped: { id: number; line: number } | null = null;
+    await h.run(400, 1 / 20, () => {
+      const c = s.conversations.find((x) => x.phase === 'talk' && x.line === x.of - 1);
+      if (!tapped && c && h.balloon && [c.a, c.b].includes(h.balloon.id)) { tapped = { id: c.id, line: c.line }; h.tapEngine(h.balloon.id); }
+    });
+    const t = tapped as { id: number; line: number } | null;
+    if (t) {
+      runs++;
+      const ended = s.log.find((l) => l.type === 'end' && (l.info ?? '').startsWith(`#${t.id} `));
+      const pause = s.log.find((l) => l.type === 'pause' && (l.info ?? '').startsWith(`#${t.id} `));
+      const resume = s.log.find((l) => l.type === 'resume' && (l.info ?? '') === `#${t.id} line ${t.line}`);
+      // paused first (never "done" right after the tap), then resumed on the same line or ended as interrupted after the wait
+      if (pause && (!ended || ended.t >= pause.t) && (resume || /interrupted/.test(ended?.info ?? ''))) good++; else bad.push({ seed, t, pause, resume, ended });
+    }
+    s.dispose();
+  }
+  ok(`tap on the last line over ${runs} seeds: always a pause (then the same line resumes), never a finished conversation`, runs >= 10 && good === runs, { runs, good, bad });
+}
 // ---- 2 Miis and door states
 {
   const h = new FakeHost(2, [3, 3]);

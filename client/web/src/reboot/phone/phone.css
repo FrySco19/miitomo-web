@@ -1,0 +1,60 @@
+/* REBOOT R5 MiiPhone — a small Miitomo-orange phone on the right edge; slides in over the world (still visible). */
+.r5-layer { position: absolute; inset: 0; pointer-events: none; z-index: 7; font-family: var(--pl-font, "MiitomoBalloon", ui-rounded, "Nunito", "Segoe UI", system-ui, sans-serif); color: #3b3530; }
+.r5-layer > * { pointer-events: auto; }
+.r5-layer [hidden] { display: none !important; }
+
+.mp-dock { position: fixed; right: max(10px, env(safe-area-inset-right)); top: 50%; translate: 0 -50%; border: 0; padding: 6px; background: none; cursor: pointer; z-index: 72; -webkit-tap-highlight-color: transparent; }
+.mp-dock-body { position: relative; display: block; width: 44px; height: 74px; border-radius: 13px; background: linear-gradient(160deg, #ff9a52, #ff6f24); box-shadow: 0 4px 0 #c94a14, 0 10px 22px rgba(0,0,0,.22); rotate: -7deg; transition: rotate .18s, translate .18s; }
+.mp-dock:hover .mp-dock-body, .mp-dock:focus-visible .mp-dock-body { rotate: -2deg; translate: -3px -2px; }
+.mp-dock:focus-visible { outline: none; }
+.mp-dock:focus-visible .mp-dock-body { outline: 3px solid #2aa5c9; outline-offset: 3px; }
+.mp-dock-cam { position: absolute; top: 5px; left: 50%; translate: -50% 0; width: 12px; height: 3px; border-radius: 3px; background: rgba(0,0,0,.25); }
+.mp-dock-screen { position: absolute; inset: 12px 5px 9px; border-radius: 7px; background: #fff7ee; display: grid; place-items: center; }
+.mp-dock-face { width: 20px; height: 20px; border-radius: 50%; background: #ffd9b8; position: relative; box-shadow: inset 0 -2px 0 rgba(0,0,0,.06); }
+.mp-dock-face::before { content: ''; position: absolute; top: 7px; left: 5px; width: 3px; height: 4px; border-radius: 2px; background: #3b3530; box-shadow: 7px 0 0 #3b3530; }
+.mp-dock-face::after { content: ''; position: absolute; bottom: 4px; left: 6px; width: 8px; height: 4px; border-bottom: 2px solid #3b3530; border-radius: 0 0 8px 8px; }
+.mp-dock-badge { position: absolute; top: -6px; right: -7px; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px; background: #2aa5c9; color: #fff; font-size: 11px; line-height: 18px; text-align: center; box-shadow: 0 2px 0 rgba(0,0,0,.18); box-sizing: border-box; }
+
+.mp-backdrop { position: fixed; inset: 0; z-index: 70; background: rgba(48, 36, 26, .16); animation: mp-fade .3s ease both; }
+.mp-backdrop.closing { animation: mp-fade .3s ease reverse both; }
+.mp-phone { position: fixed; z-index: 71; right: max(16px, env(safe-area-inset-right)); top: 50%; translate: 0 -50%; width: 372px; height: min(760px, calc(100dvh - 32px)); animation: mp-in .36s cubic-bezier(.2,.9,.3,1.15) both; }
+.mp-phone.closing { animation: mp-out .3s ease-in both; }
+@keyframes mp-in { from { transform: translateX(120%) rotate(8deg); opacity: .4; } to { transform: none; opacity: 1; } }
+@keyframes mp-out { from { transform: none; opacity: 1; } to { transform: translateX(120%) rotate(8deg); opacity: .3; } }
+@keyframes mp-fade { from { opacity: 0; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .mp-phone, .mp-phone.closing, .mp-backdrop, .mp-backdrop.closing { animation-duration: .01s; } }
+.mp-frame { position: relative; height: 100%; box-sizing: border-box; border-radius: 40px; padding: 30px 12px 14px; background: linear-gradient(160deg, #ff9a52, #ff6f24); box-shadow: 0 7px 0 #c94a14, 0 24px 60px rgba(0,0,0,.28); display: flex; flex-direction: column; }
+.mp-speaker { position: absolute; top: 12px; left: 50%; translate: -50% 0; width: 54px; height: 6px; border-radius: 6px; background: rgba(0,0,0,.22); }
+.mp-bar { display: flex; align-items: center; gap: 8px; padding: 0 4px 8px; color: #fff; }
+.mp-title { flex: 1; text-align: center; font-size: 17px; letter-spacing: .01em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mp-back, .mp-x { width: 34px; height: 34px; border-radius: 50%; border: 0; background: rgba(255,255,255,.22); display: grid; place-items: center; cursor: pointer; padding: 0; }
+.mp-back svg, .mp-x svg { width: 18px; height: 18px; fill: none; stroke: #fff; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+.mp-back:hover, .mp-x:hover { background: rgba(255,255,255,.34); }
+.mp-screen { flex: 1; min-height: 0; overflow: auto; overscroll-behavior: contain; border-radius: 26px; background: #fffaf4; }
+.mp-toast { position: absolute; left: 50%; bottom: 26px; translate: -50% 0; margin: 0; max-width: calc(100% - 48px); background: rgba(40,32,24,.9); color: #fff; padding: 8px 14px; border-radius: 999px; font-size: 13px; text-align: center; }
+
+/* home */
+.mp-home { min-height: 100%; box-sizing: border-box; padding: 22px 18px 16px; display: flex; flex-direction: column; gap: 18px; background: radial-gradient(120% 70% at 50% 0%, #fff 0%, #fff4e8 60%, #ffe8d2 100%); }
+.mp-hello { margin: 0; text-align: center; color: #9a7a62; font-size: 13px; }
+.mp-apps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px 10px; }
+.mp-app { border: 0; background: none; display: grid; justify-items: center; gap: 6px; font: inherit; font-size: 12px; color: #3b3530; cursor: pointer; padding: 4px; border-radius: 16px; }
+.mp-app:hover { background: rgba(255,122,47,.08); }
+.mp-app-ico { width: 62px; height: 62px; border-radius: 19px; display: grid; place-items: center; background: linear-gradient(140deg, #ffb35c, #ff5e7a); box-shadow: 0 4px 0 rgba(160,60,40,.25); }
+.mp-app-ico svg { width: 36px; height: 36px; }
+.mp-lang { margin-top: auto; display: flex; align-items: center; gap: 6px; justify-content: center; flex-wrap: wrap; font-size: 12px; color: #7a6f66; }
+.mp-lang button, .mi-lang button { border: 0; border-radius: 999px; padding: 6px 12px; font: inherit; font-size: 12px; background: #fff; color: #3b3530; box-shadow: 0 2px 0 rgba(0,0,0,.1); cursor: pointer; }
+.mp-lang button[aria-pressed="true"], .mi-lang button[aria-pressed="true"] { background: #ff7a2f; color: #fff; box-shadow: 0 2px 0 #c94a14; }
+.mp-note { margin: 0; text-align: center; font-size: 10.5px; color: #b09a88; }
+.mp-empty { color: #7a6f66; font-size: 13px; text-align: center; padding: 18px; }
+
+/* narrow screens: the phone IS the screen (no tiny phone inside the real phone) */
+@media (max-width: 560px), (max-height: 520px) {
+  .mp-phone { inset: 0; translate: none; width: auto; height: auto; }
+  .mp-frame { border-radius: 0; padding: max(10px, env(safe-area-inset-top)) max(8px, env(safe-area-inset-right)) max(8px, env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-left)); box-shadow: none; }
+  .mp-speaker { display: none; }
+  .mp-screen { border-radius: 18px; }
+  @keyframes mp-in { from { transform: translateY(100%); } to { transform: none; } }
+  @keyframes mp-out { from { transform: none; } to { transform: translateY(100%); } }
+  .mp-dock { top: auto; bottom: max(96px, calc(env(safe-area-inset-bottom) + 90px)); translate: none; }
+  .mp-dock-body { width: 38px; height: 64px; }
+}

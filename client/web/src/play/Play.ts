@@ -81,7 +81,7 @@ export interface PlayApi {
   /** Scene music by its original Action/bgm key (e.g. bgm_closetSceneInit); null = room music. */
   setMusic(key: string | null): void;
   /** M18: a friend enters the user's room (two Miis); resolves false if the room is not ready or a guest is there. */
-  guestArrive(sp: GuestSpec): Promise<boolean>;
+  guestArrive(sp: GuestSpec, opts?: { inside?: { x: number; z: number } }): Promise<boolean>;
   /** M18: the guest says goodbye (1.4 / 1.3) and leaves through the door. */
   guestLeave(id?: string): boolean;
   /** M18: the guest (all guests without id) is removed at once (the user leaves the room). */
@@ -308,6 +308,14 @@ export class Play {
     this.scheduleGuest();
     this.api.setEditView(null);
     this.visiting = null; this.api.setFriendHost(null); this.api.setMusic(null);
+    this.wearOwnMii();
+    this.api.setRoom(this.save.room.wall, this.save.room.floor, this.save.room.variant);
+    this.api.setScene('room');
+    if (fresh) { this.api.enterFresh(); this.api.rebuild(); }   // back from a visit: the user's Mii comes in again
+    this.renderBar();
+  }
+  /** The user's own Mii, name, greetings, personality, voice and outfit on the stage. */
+  private wearOwnMii() {
     const p = this.save.profile;
     if (p.miiData) this.api.setMii(b64.dec(p.miiData), p.height, p.build);
     this.api.setNickname(p.name || this.api.miiName() || 'Mii');
@@ -316,11 +324,27 @@ export class Play {
     this.api.setVoice(this.save.settings.voice, p.voice);
     Object.keys(this.api.outfit).forEach((k) => delete (this.api.outfit as any)[k]);
     Object.assign(this.api.outfit, structuredClone(this.save.outfit));
-    this.api.setRoom(this.save.room.wall, this.save.room.floor, this.save.room.variant);
-    this.api.setScene('room');
-    if (fresh) { this.api.enterFresh(); this.api.rebuild(); }   // back from a visit: the user's Mii comes in again
-    this.renderBar();
   }
+  /**
+   * REBOOT places only (friend rooms, Sala Giochi — R5; Classic never calls it): the room engine shows another room
+   * look and the user's own Mii comes in through the door. The Reboot layer draws the place's own bar.
+   */
+  visitPlace(id: string, skin: { wall: string; floor: string; variant: number }, friendHost: number | null) {
+    if (this.screen !== 'room' && !this.screen.startsWith('place:')) return false;
+    this.closeSheet();
+    this.api.guestEnd(); this.clearGuestTimers();
+    this.visiting = null; this.screen = 'place:' + id;
+    this.api.setEditView(null); this.api.setMusic(null);
+    this.wearOwnMii();
+    this.api.setRoom(skin.wall, skin.floor, skin.variant);
+    this.api.setFriendHost(friendHost);
+    this.api.setScene('room');
+    this.api.enterFresh(); this.api.rebuild();
+    this.root.innerHTML = '';
+    return true;
+  }
+  /** REBOOT: an extra action on the Miifoto screen ("share on MIInstagram"); null in Classic. */
+  photoShare: { label: () => string; share: (dataUrl: string) => void } | null = null;
   /** Greeting after the entrance: first entry plays the tutorial welcome line (pages), then the save remembers it. */
   private enterGreeting(first: boolean): boolean {
     if (this.visiting) {
@@ -735,10 +759,10 @@ export class Play {
     }, wait));
   }
   /** Starts a visit of a local friend (tests / schedule). `stayMs` > 0 makes it leave by itself. */
-  async inviteGuest(id: string, stayMs = 0) {
+  async inviteGuest(id: string, stayMs = 0, opts?: { inside?: { x: number; z: number } }) {
     const f = await this.social.get(id); if (!f || !f.profile.miiData) return false;
     const p = f.profile;
-    const ok = await this.api.guestArrive({ id: f.id, name: p.name, miiData: b64.dec(p.miiData!), outfit: structuredClone(f.outfit), height: p.height, build: p.build, personality: p.personality, greetings: p.greetings, voice: p.voice });
+    const ok = await this.api.guestArrive({ id: f.id, name: p.name, miiData: b64.dec(p.miiData!), outfit: structuredClone(f.outfit), height: p.height, build: p.build, personality: p.personality, greetings: p.greetings, voice: p.voice }, opts);
     if (!ok) return false;
     this.guestLast.set(f.id, Date.now());
     if (stayMs > 0) this.guestTimers.push(window.setTimeout(() => { if (this.api.guestState(f.id)) this.api.guestLeave(f.id); }, stayMs));
@@ -982,11 +1006,12 @@ export class Play {
         </div>
         <div class="pf-body"></div>
         <div class="pf-sel"></div>
-        <div class="pl-actions wrap"><button class="pl-btn ghost" data-a="random">${esc(lb('Layout/camera/parts/optionBtn00.msbt', 'title00@cameraRetake', 'Posa e sfondo casuali'))}</button><button class="pl-btn primary" data-a="savephoto">Salva Miifoto</button><button class="pl-btn ghost" data-a="close">Chiudi</button></div>
+        <div class="pl-actions wrap"><button class="pl-btn ghost" data-a="random">${esc(lb('Layout/camera/parts/optionBtn00.msbt', 'title00@cameraRetake', 'Posa e sfondo casuali'))}</button><button class="pl-btn primary" data-a="savephoto">Salva Miifoto</button>${this.photoShare ? `<button class="pl-btn primary" data-a="sharephoto">${esc(this.photoShare.label())}</button>` : ''}<button class="pl-btn ghost" data-a="close">Chiudi</button></div>
       </aside></section>`;
     this.root.querySelectorAll<HTMLButtonElement>('.pf-tabs button').forEach((b) => b.addEventListener('click', () => { this.mfTab = b.dataset.t!; this.mfPanel(); }));
     this.on('close', () => { this.api.setMiiExpression?.(0); this.startRoom(); });
     this.on('savephoto', () => this.savePhoto());
+    this.on('sharephoto', () => this.sharePhoto());
     this.on('random', () => { const ps = MF.poses(), bs = MF.backgrounds(); const r = (n: number) => Math.floor(Math.random() * n);
       if (ps.length) { const p = ps[r(ps.length)]; this.photo.mii.pose = p.id; this.photo.mii.face = p.face; } if (bs.length) this.photo.bg = bs[r(bs.length)].id; this.mfRender(); this.mfPanel(); });
     this.mfDrag();
@@ -1070,6 +1095,19 @@ export class Play {
     const cv = this.root.querySelector<HTMLCanvasElement>('.pf-canvas'); if (!cv) return;
     this.sel = null;
     this.mfRender().then(() => { const a = document.createElement('a'); a.href = cv.toDataURL('image/png'); a.download = `miifoto-${Date.now()}.png`; a.click(); });
+  }
+
+  /** REBOOT: the composed photo goes to the share handler (a 480 px JPEG), then back to the room. */
+  sharePhoto() {
+    const cv = this.root.querySelector<HTMLCanvasElement>('.pf-canvas'); const sh = this.photoShare; if (!cv || !sh) return;
+    this.sel = null;
+    this.mfRender().then(() => {
+      const out = document.createElement('canvas'); out.width = out.height = 480;
+      out.getContext('2d')!.drawImage(cv, 0, 0, 480, 480);
+      const url = out.toDataURL('image/jpeg', 0.85);
+      this.api.setMiiExpression?.(0); this.startRoom();
+      sh.share(url);
+    });
   }
 
   // ---------------- save ----------------

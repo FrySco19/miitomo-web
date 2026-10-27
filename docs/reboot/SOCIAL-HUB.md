@@ -72,17 +72,29 @@ Transitions are explicit, and only one runs at a time:
 
 Cleanup is R3's only. R4 adds none.
 
+## R5: places, texts, eviction
+
+- **Places** are registered destinations with `here()` and `leave()`: friends' rooms (with a panel: the list of
+  rooms, inside the hub screen) and the Sala Giochi. `at` is still derived: `hub`, `public`, the place the user is in,
+  or `home`. Going anywhere from a place first runs the place's own cleanup; going from the public room into a place
+  first lets R3 close it (same wait and time-out as public → home). Friend room → another friend room is
+  `go('friends', otherRoom)`.
+- A refused place answers `REFUSED` with the place's reason (`FULL`, `PRIVATE`, `CLOSED`…) and leaves the user at the
+  hub. When a place sends the user out (owner closed it, it disappeared), the user lands in the Piazza with the reason
+  (`EVICTED`).
+- Every text comes from i18n (Italian R4 texts kept word for word); the language choice is in the hub header.
+- MIInstagram is no longer a destination: it lives in the MiiPhone. The remaining future destination is "Eventi in
+  Piazza" (R8).
+
 ## Destinations and extension point
 
 - **Casa:** always available.
 - **La mia stanza pubblica:** available unless it is closing.
-- **Future destinations** (`FUTURE_DESTINATIONS`) are shown disabled with the phase that brings them. There is no fake
-  networking behind them:
-  - Stanze degli amici (R10, needs the server);
-  - Sala giochi (R6–R7);
-  - MIInstagram (R5).
-- **Adding a destination:** `hub.register({ id, title, subtitle, phase, available(), go() })`. Its `go()` performs the
-  move, using whatever service that space has. The hub model does not change.
+- **Future destinations** are shown disabled with the phase that brings them. There is no fake networking behind them.
+  R4 declared Stanze degli amici, Sala giochi and MIInstagram here; R5 made the first two real places and moved
+  MIInstagram to the MiiPhone.
+- **Adding a destination:** `hub.register({ id, title, subtitle, phase, available(), go(arg?), here?(), leave?(), panel? })`.
+  Its `go()` performs the move, using whatever service that space has. The hub model does not change.
 
 ## Relation with R2 / R2b / R3
 
