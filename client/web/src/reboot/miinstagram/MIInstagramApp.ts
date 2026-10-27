@@ -42,6 +42,8 @@ export interface MIInstagramDeps {
   closePhone: () => void;
   /** R6 Settings: ask before deleting a post (default: ask). */
   confirm?: () => boolean;
+  /** R6.0b: the photo frame in use (Reboot shop) around the user's own photos; null = none. */
+  frame?: () => { a: string; b: string } | null;
 }
 
 export class MIInstagramApp {
@@ -124,7 +126,8 @@ export class MIInstagramApp {
     const a = this.author(p.authorId), mine = p.reactions[this.d.me] ?? null, counts = reactionCounts(p);
     const art = document.createElement('article'); art.className = `mi-card r-card k-${p.kind}`; art.dataset.id = p.id;
     let body = '';
-    if (p.kind === 'photo') body = `<div class="mi-photo" data-photo="${esc(p.photoId)}"><span class="mi-ph-wait"></span></div>${p.caption ? `<p class="mi-cap"><b>${esc(a.name)}</b> ${esc(p.caption)}</p>` : ''}`;
+    const fr = p.kind === 'photo' && p.authorId === this.d.me ? this.d.frame?.() ?? null : null;
+    if (p.kind === 'photo') body = `<div class="mi-photo${fr ? ' framed' : ''}"${fr ? ` style="--frame-a:${fr.a};--frame-b:${fr.b}"` : ''} data-photo="${esc(p.photoId)}"><span class="mi-ph-wait"></span></div>${p.caption ? `<p class="mi-cap"><b>${esc(a.name)}</b> ${esc(p.caption)}</p>` : ''}`;
     if (p.kind === 'activity') body = `<div class="mi-act a-${p.activity}"><span class="mi-act-ico">${KIND_ICON[p.activity] ?? KIND_ICON.social}</span><p>${esc(this.d.i18n.line(p.line))}</p></div>`;
     if (p.kind === 'answer') body = `<div class="mi-ans"><p class="mi-q">${esc(this.d.i18n.line(p.question))}</p><p class="mi-a">“${esc(p.answer)}”</p></div>`;
     const showAll = this.open.has(p.id), list = showAll ? p.comments : p.comments.slice(-2);

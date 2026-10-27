@@ -1,0 +1,31 @@
+/* REBOOT R6.0b — the Reboot shop (MiiPhone app) on the design tokens. All looks are CSS: no images. */
+.sh-coin { width: 18px; height: 18px; flex: none; vertical-align: -3px; }
+.sh-bal { display: flex; align-items: center; justify-content: center; gap: var(--r-s2); padding: var(--r-s2); border-radius: var(--r-r-lg); background: var(--r-surface); box-shadow: var(--r-shadow-key); }
+.sh-bal .sh-coin { width: 26px; height: 26px; }
+.sh-bal b { font-size: var(--r-fs-2xl); color: var(--r-ink); font-variant-numeric: tabular-nums; }
+.sh-bal span { color: var(--r-ink-2); font-size: var(--r-fs-sm); }
+.sh-grid { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--r-s2); }
+.sh-item { display: grid; justify-items: center; gap: var(--r-s1); padding: var(--r-s3) var(--r-s2); text-align: center; }
+.sh-item b { font-size: var(--r-fs-sm); color: var(--r-ink); }
+.sh-item small { font-size: var(--r-fs-xs); color: var(--r-ink-2); display: inline-flex; align-items: center; gap: 3px; }
+.sh-item .sh-coin { width: 14px; height: 14px; }
+.sh-item.trying { box-shadow: 0 0 0 3px var(--r-blue-hi), var(--r-shadow-card); }
+.sh-look { border: 0; background: none; padding: 4px; cursor: pointer; border-radius: var(--r-r-md); }
+.sh-look[tabindex="-1"] { cursor: default; }
+.sh-sw { display: block; width: 64px; height: 64px; position: relative; }
+.sh-sw.cover i { position: absolute; inset: 2px 14px; border-radius: 9px; background: linear-gradient(160deg, var(--a), var(--b)); box-shadow: 0 3px 0 color-mix(in srgb, var(--b) 70%, #000); }
+.sh-sw.cover i::after { content: ''; position: absolute; inset: 9px 4px 6px; border-radius: 5px; background: var(--r-cream); }
+.sh-sw.card i { position: absolute; inset: 8px 2px; border-radius: 10px; background: linear-gradient(150deg, var(--a), var(--b)); box-shadow: inset 0 0 0 1px var(--r-line); }
+.sh-sw.card b { position: absolute; left: 50%; top: 18px; translate: -50% 0; width: 18px; height: 18px; border-radius: 50%; background: var(--r-accent-hi); }
+.sh-sw.frame i { position: absolute; inset: 4px; border-radius: 8px; padding: 5px; background: linear-gradient(135deg, var(--a), var(--b)); }
+.sh-sw.frame i::after { content: ''; position: absolute; inset: 5px; border-radius: 4px; background: linear-gradient(#cfe6f7 55%, #e9c9a4 55%); }
+.sh-sw.frame.none i { background: var(--r-line); padding: 0; }
+.sh-amt { font-weight: var(--r-fw); font-variant-numeric: tabular-nums; }
+.sh-amt.plus { color: var(--r-green); }
+.sh-amt.minus { color: var(--r-danger); }
+.sh .r-msg:empty { display: none; }
+/* effects of what is in use: the profile card and the photo frame */
+.pp-me.themed { background: linear-gradient(150deg, var(--card-a), var(--card-b)); }
+.mi-photo.framed { padding: 5px; background: linear-gradient(135deg, var(--frame-a), var(--frame-b)); }
+.mi-photo.framed img { border-radius: calc(var(--r-r-md) - 4px); }
+.r-toast.wallet { display: inline-flex; align-items: center; gap: 6px; bottom: max(84px, calc(env(safe-area-inset-bottom) + 72px)); }

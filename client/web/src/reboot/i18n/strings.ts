@@ -127,7 +127,7 @@ const en: Record<string, string> = {
   'tpl.lounge': 'Open lounge',
   'flag.MULTI_MII_ENABLED': 'Several Miis in the room', 'flag.SOCIAL_LIFE_ENABLED': 'Social life of the Miis', 'flag.PUBLIC_ROOMS_ENABLED': 'Public room', 'flag.HUB_ENABLED': 'Plaza (Social Hub)',
   'flag.FRIEND_ROOMS_ENABLED': 'Friends\' rooms', 'flag.MIIPHONE_ENABLED': 'MiiPhone', 'flag.MIINSTAGRAM_ENABLED': 'MIInstagram', 'flag.MINIGAMES_ENABLED': 'Game Room (Mii Quiz)',
-  'flag.EVENTS_ENABLED': 'Events', 'flag.REWARDS_ENABLED': 'Rewards', 'flag.NOTIFICATIONS_ENABLED': 'Notifications', 'flag.MIIFOTO2_ENABLED': 'Miifoto 2 (share, photo of the room)',
+  'flag.EVENTS_ENABLED': 'Events', 'flag.REWARDS_ENABLED': 'Rewards', 'flag.NOTIFICATIONS_ENABLED': 'Notifications', 'flag.MIIFOTO2_ENABLED': 'Miifoto 2 (share, photo of the room)', 'flag.SHOP_ENABLED': 'Reboot shop and coins',
   // R2b chat lines (NEW text): kind.n; tone.<personality>.kind.n are added to the pool
   'chat.open.0': 'Hey, {name}!', 'chat.open.1': 'Hi {name}, how are you?', 'chat.open.2': '{name}! What\'s new?',
   'chat.reply.0': 'All good, thanks!', 'chat.reply.1': 'Good! And you?', 'chat.reply.2': 'Not bad.', 'chat.reply.3': 'Great!',
@@ -150,6 +150,23 @@ const en: Record<string, string> = {
   'rel.0': 'Friend', 'rel.1': 'Good friend', 'rel.2': 'Close friend', 'rel.3': 'Best friend', 'rel.next': '{pct}% to "{level}"', 'rel.max': 'Top level',
   'where.home': 'At home · room open', 'where.private': 'At home · private room', 'where.out': 'Out and about',
   'where.room': 'At {name}\'s', 'where.games': 'In the Game Room', 'where.unknown': 'Not known yet',
+
+  // R6.0b — economy + Reboot shop
+  'app.shop': 'Shop', 'profile.stat.coins': 'coins',
+  'shop.coins': 'coins', 'shop.tab.cover': 'Covers', 'shop.tab.card': 'Cards', 'shop.tab.frame': 'Frames', 'shop.tab.wallet': 'Wallet',
+  'shop.buy': 'Buy', 'shop.buyConfirm': 'Buy for {price}?', 'shop.use': 'Use', 'shop.inUse': 'In use', 'shop.owned': 'Yours', 'shop.missing': '{n} more needed',
+  'shop.try': 'Try {name} on the MiiPhone', 'shop.tryNote': 'Tap a cover to try it on your MiiPhone.', 'shop.bought': '{name} is yours, and in use.', 'shop.equipped': 'In use now.',
+  'shop.note': 'Reboot shop: new looks made for Reboot, paid with coins you earn by playing. No real money. Clothes stay free in your Closet.',
+  'shop.err.UNKNOWN': 'This item does not exist.', 'shop.err.OWNED': 'You already have it.', 'shop.err.NOT_OWNED': 'Buy it first.', 'shop.err.INSUFFICIENT': 'Not enough coins yet.',
+  'item.cover.orange': 'Orange', 'item.cover.mint': 'Mint', 'item.cover.sky': 'Sky', 'item.cover.berry': 'Berry', 'item.cover.grape': 'Grape', 'item.cover.night': 'Night',
+  'item.card.plain': 'White', 'item.card.sunset': 'Sunset', 'item.card.lagoon': 'Lagoon', 'item.card.lilac': 'Lilac',
+  'item.frame.none': 'No frame', 'item.frame.gold': 'Gold', 'item.frame.candy': 'Candy', 'item.frame.leaf': 'Leaf',
+  'wallet.how': 'How to earn coins', 'wallet.history': 'History', 'wallet.empty': 'Nothing yet.', 'wallet.perDay': 'today {used}/{max}', 'wallet.once': 'once each',
+  'rule.welcome': 'Welcome to Reboot', 'rule.daily': 'First visit of the day', 'rule.game.played': 'A match in the Game Room', 'rule.game.win': 'Winning a match',
+  'rule.game.badge': 'A new badge', 'rule.post.photo': 'A photo on MIInstagram', 'rule.visit.friend': 'Visiting a friend\'s room', 'rule.friend.level': 'A friend gets closer',
+  'earn.welcome': 'Welcome to Reboot', 'earn.daily': 'First visit of the day', 'earn.game.played': 'Match played', 'earn.game.win': 'Match won',
+  'earn.game.badge': 'New badge: {name}', 'earn.post.photo': 'Photo posted', 'earn.visit.friend': 'Visit to {name}', 'earn.friend.level': '{name} is now: {level}',
+  'spend.shop': 'Bought: {item}', 'wallet.toast': '+{n} · {why}',
 };
 
 const it: Record<string, string> = {
@@ -268,7 +285,7 @@ const it: Record<string, string> = {
   'tpl.lounge': 'Salotto aperto',
   'flag.MULTI_MII_ENABLED': 'Più Mii nella stanza', 'flag.SOCIAL_LIFE_ENABLED': 'Vita sociale dei Mii', 'flag.PUBLIC_ROOMS_ENABLED': 'Stanza pubblica', 'flag.HUB_ENABLED': 'Piazza (Social Hub)',
   'flag.FRIEND_ROOMS_ENABLED': 'Stanze degli amici', 'flag.MIIPHONE_ENABLED': 'MiiPhone', 'flag.MIINSTAGRAM_ENABLED': 'MIInstagram', 'flag.MINIGAMES_ENABLED': 'Sala Giochi (Quiz dei Mii)',
-  'flag.EVENTS_ENABLED': 'Eventi', 'flag.REWARDS_ENABLED': 'Ricompense', 'flag.NOTIFICATIONS_ENABLED': 'Notifiche', 'flag.MIIFOTO2_ENABLED': 'Miifoto 2 (condividi, foto della stanza)',
+  'flag.EVENTS_ENABLED': 'Eventi', 'flag.REWARDS_ENABLED': 'Ricompense', 'flag.NOTIFICATIONS_ENABLED': 'Notifiche', 'flag.MIIFOTO2_ENABLED': 'Miifoto 2 (condividi, foto della stanza)', 'flag.SHOP_ENABLED': 'Negozio Reboot e monete',
   'chat.open.0': 'Ehi, {name}!', 'chat.open.1': 'Ciao {name}, come va?', 'chat.open.2': '{name}! Che si dice?',
   'chat.reply.0': 'Tutto bene, grazie!', 'chat.reply.1': 'Bene! E tu?', 'chat.reply.2': 'Non c\'è male.', 'chat.reply.3': 'Benissimo!',
   'chat.follow.0': 'Che bello!', 'chat.follow.1': 'Davvero? Racconta!', 'chat.follow.2': 'Ah, capisco.', 'chat.follow.3': 'Anch\'io!', 'chat.follow.4': 'Ma dai!',
@@ -289,6 +306,22 @@ const it: Record<string, string> = {
   'rel.0': 'Amico', 'rel.1': 'Buon amico', 'rel.2': 'Amico stretto', 'rel.3': 'Migliore amico', 'rel.next': '{pct}% verso "{level}"', 'rel.max': 'Livello massimo',
   'where.home': 'A casa · stanza aperta', 'where.private': 'A casa · stanza privata', 'where.out': 'In giro',
   'where.room': 'Da {name}', 'where.games': 'Nella Sala Giochi', 'where.unknown': 'Non ancora noto',
+
+  'app.shop': 'Negozio', 'profile.stat.coins': 'monete',
+  'shop.coins': 'monete', 'shop.tab.cover': 'Cover', 'shop.tab.card': 'Schede', 'shop.tab.frame': 'Cornici', 'shop.tab.wallet': 'Portafoglio',
+  'shop.buy': 'Compra', 'shop.buyConfirm': 'Compri per {price}?', 'shop.use': 'Usa', 'shop.inUse': 'In uso', 'shop.owned': 'Tuo', 'shop.missing': 'ne mancano {n}',
+  'shop.try': 'Prova {name} sul MiiPhone', 'shop.tryNote': 'Tocca una cover per provarla sul tuo MiiPhone.', 'shop.bought': '{name} è tuo, ed è in uso.', 'shop.equipped': 'Ora in uso.',
+  'shop.note': 'Negozio Reboot: look nuovi fatti per Reboot, pagati con le monete che guadagni giocando. Niente soldi veri. I vestiti restano gratis nel Guardaroba.',
+  'shop.err.UNKNOWN': 'Questo articolo non esiste.', 'shop.err.OWNED': 'Ce l\'hai già.', 'shop.err.NOT_OWNED': 'Prima compralo.', 'shop.err.INSUFFICIENT': 'Non hai ancora abbastanza monete.',
+  'item.cover.orange': 'Arancio', 'item.cover.mint': 'Menta', 'item.cover.sky': 'Cielo', 'item.cover.berry': 'Lampone', 'item.cover.grape': 'Uva', 'item.cover.night': 'Notte',
+  'item.card.plain': 'Bianca', 'item.card.sunset': 'Tramonto', 'item.card.lagoon': 'Laguna', 'item.card.lilac': 'Lilla',
+  'item.frame.none': 'Senza cornice', 'item.frame.gold': 'Oro', 'item.frame.candy': 'Caramella', 'item.frame.leaf': 'Foglia',
+  'wallet.how': 'Come si guadagnano monete', 'wallet.history': 'Movimenti', 'wallet.empty': 'Ancora niente.', 'wallet.perDay': 'oggi {used}/{max}', 'wallet.once': 'una volta ciascuno',
+  'rule.welcome': 'Benvenuto in Reboot', 'rule.daily': 'Prima visita del giorno', 'rule.game.played': 'Una partita nella Sala Giochi', 'rule.game.win': 'Vincere una partita',
+  'rule.game.badge': 'Un nuovo distintivo', 'rule.post.photo': 'Una foto su MIInstagram', 'rule.visit.friend': 'Visitare la stanza di un amico', 'rule.friend.level': 'Un amico diventa più vicino',
+  'earn.welcome': 'Benvenuto in Reboot', 'earn.daily': 'Prima visita del giorno', 'earn.game.played': 'Partita giocata', 'earn.game.win': 'Partita vinta',
+  'earn.game.badge': 'Nuovo distintivo: {name}', 'earn.post.photo': 'Foto pubblicata', 'earn.visit.friend': 'Visita a {name}', 'earn.friend.level': '{name} ora è: {level}',
+  'spend.shop': 'Comprato: {item}', 'wallet.toast': '+{n} · {why}',
 };
 
 /** Registry of language tables: adding a language = adding its table here (missing keys fall back to English). */

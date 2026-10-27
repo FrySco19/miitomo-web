@@ -28,6 +28,9 @@ export interface ProfileDeps {
   /** null = Sala Giochi switched off. */
   stats: (() => GameStats) | null;
   openApp: (id: string) => void;
+  /** R6.0b: the profile card in use (Reboot shop), null = plain; the coins (null = economy off). */
+  card?: () => { a: string; b: string } | null;
+  coins?: (() => number) | null;
 }
 
 export function profileApp(d: ProfileDeps) {
@@ -40,7 +43,8 @@ export function profileApp(d: ProfileDeps) {
     const overview = () => {
       const p = d.profile(), st = d.stats?.(), n = d.posts?.().length;
       const stat = (v: number, k: string) => `<div class="pp-stat"><b>${v}</b><span>${esc(t('profile.stat.' + k))}</span></div>`;
-      return `<div class="r-card pp-me">
+      const c = d.card?.() ?? null;
+      return `<div class="r-card pp-me${c ? ' themed' : ''}"${c ? ` style="--card-a:${c.a};--card-b:${c.b}"` : ''}>
           <span class="r-avatar lg p${p.personality}" aria-hidden="true">${initial(p.name)}</span>
           <h3 class="pp-name">${esc(p.name)}</h3>
           <dl class="pp-facts">
@@ -49,7 +53,7 @@ export function profileApp(d: ProfileDeps) {
             <div><dt>${esc(t('profile.greeting'))}</dt><dd>${p.greeting.trim() ? `“${esc(p.greeting.trim())}”` : `<em>${esc(t('profile.none'))}</em>`}</dd></div>
           </dl>
         </div>
-        <div class="pp-stats">${n !== undefined ? stat(n, 'posts') : ''}${stat(friends.length, 'friends')}${st ? stat(st.played, 'played') + stat(st.wins, 'wins') : ''}</div>
+        <div class="pp-stats">${n !== undefined ? stat(n, 'posts') : ''}${stat(friends.length, 'friends')}${st ? stat(st.played, 'played') + stat(st.wins, 'wins') : ''}${d.coins ? stat(d.coins(), 'coins') : ''}</div>
         ${st ? `<section class="ap-sec"><h3 class="r-sub">${esc(t('profile.badges'))}</h3>${st.badges.length ? `<div class="pp-badges">${st.badges.map((b) => `<span class="r-chip accent">${esc(d.i18n.has('reward.' + b) ? t('reward.' + b) : b)}</span>`).join('')}</div>` : `<p class="r-note">${esc(t('profile.noBadges'))}</p>`}</section>` : ''}
         <p class="r-note">${esc(t('profile.note'))}</p>`;
     };

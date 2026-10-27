@@ -65,16 +65,16 @@ const families: Record<string, string[]> = {
   'set.q.': ['auto', 'high', 'balanced', 'low'], 'set.m.': ['system', 'full', 'reduced'],
   // R6 Reboot panel, MiiPhone apps, chat lines
   'rbt.ev.': ['join', 'leave', 'kick', 'full', 'cantJoin', 'denied', 'open', 'closing', 'closed', 'owner-left'],
-  'flag.': ['MULTI_MII_ENABLED', 'SOCIAL_LIFE_ENABLED', 'PUBLIC_ROOMS_ENABLED', 'HUB_ENABLED', 'FRIEND_ROOMS_ENABLED', 'MIIPHONE_ENABLED', 'MIINSTAGRAM_ENABLED', 'MINIGAMES_ENABLED', 'EVENTS_ENABLED', 'REWARDS_ENABLED', 'NOTIFICATIONS_ENABLED', 'MIIFOTO2_ENABLED'],
+  'flag.': ['MULTI_MII_ENABLED', 'SOCIAL_LIFE_ENABLED', 'PUBLIC_ROOMS_ENABLED', 'HUB_ENABLED', 'FRIEND_ROOMS_ENABLED', 'MIIPHONE_ENABLED', 'MIINSTAGRAM_ENABLED', 'MINIGAMES_ENABLED', 'EVENTS_ENABLED', 'REWARDS_ENABLED', 'NOTIFICATIONS_ENABLED', 'MIIFOTO2_ENABLED', 'SHOP_ENABLED'],
   'rel.': ['0', '1', '2', '3'], 'where.': ['home', 'private', 'out', 'room', 'games', 'unknown'], 'profile.tab.': ['overview', 'posts', 'friends'],
-  'profile.stat.': ['posts', 'friends', 'played', 'wins'], 'chat.': ['open.0', 'reply.0', 'follow.0', 'close.0', 'closeReply.0'], 'tpl.': ['lounge'],
+  'profile.stat.': ['posts', 'friends', 'played', 'wins', 'coins'], 'shop.tab.': ['cover', 'card', 'frame', 'wallet'], 'shop.err.': ['UNKNOWN', 'OWNED', 'NOT_OWNED', 'INSUFFICIENT'], 'chat.': ['open.0', 'reply.0', 'follow.0', 'close.0', 'closeReply.0'], 'tpl.': ['lounge'],
 };
 const famMissing = Object.entries(families).flatMap(([p, ks]) => ks.map((k) => p + k)).filter((k) => !(k in STRINGS.en));
 const cm = [0, 1, 2, 3].flatMap((p) => ['photo', 'activity', 'answer'].flatMap((k) => [0, 1, 2].map((n) => `cm.${p}.${k}.${n}`))).filter((k) => !(k in STRINGS.en));
 ok('code: every dynamic key family is complete (errors, statuses, reactions, comments by personality…)', !famMissing.length && !cm.length, { famMissing, cm });
 const branches = code.filter(([f, t]) => !f.startsWith('i18n') && /(lang|language)\s*===\s*['"](en|it)['"]/.test(t)).map(([f]) => f);
 ok('code: no `if (language === …)` branches outside the i18n module', !branches.length, branches);
-const r5 = ['places', 'games', 'phone', 'miinstagram', 'settings', 'people', 'ui'];
+const r5 = ['places', 'games', 'phone', 'miinstagram', 'settings', 'people', 'ui', 'shop'];
 const hard = code.filter(([f]) => r5.some((d) => f.startsWith(d))).flatMap(([f, t]) => [...t.matchAll(/innerHTML\s*=\s*`[^`]*>([A-Za-zÀ-ÿ][A-Za-zÀ-ÿ ,'!]{6,})</g)].map((m) => `${f}: ${m[1]}`)).filter((x) => !x.endsWith(': Miitomo Reboot'));   // the brand name stays
 ok('code: no hard-coded sentences in the new R5 / R6 views (texts come from i18n)', !hard.length, hard);
 if (fails) { console.log(`${fails} FAILED`); process.exit(1); } else { console.log('ALL PASS'); process.exit(0); }

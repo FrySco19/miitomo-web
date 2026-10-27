@@ -33,6 +33,11 @@ import { SettingsStore } from './settings/Settings';
 import { settingsApp } from './settings/SettingsApp';
 import { profileApp } from './people/ProfileApp';
 import { friendsApp } from './people/FriendsApp';
+import { relationLevel } from './people/levels';
+import { Wallet } from './economy/Wallet';
+import { Inventory } from './shop/Inventory';
+import { itemById } from './shop/catalog';
+import { shopApp, COIN_ICON } from './shop/ShopApp';
 
 const ico = (paths: string) => `<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">${paths}</svg>`;
 const APP_ICONS = {
@@ -42,6 +47,7 @@ const APP_ICONS = {
   home: ico('<path d="M4 11.5 12 5l8 6.5V20h-5.5v-5h-5v5H4z"/>'),
   rooms: ico('<rect x="3.5" y="5" width="7.5" height="14" rx="1.5"/><rect x="13" y="5" width="7.5" height="14" rx="1.5"/><path d="M9 12h.01M15 12h.01"/>'),
   games: ico('<path d="M7 8h10a4.5 4.5 0 0 1 0 9l-2-2H9l-2 2a4.5 4.5 0 0 1 0-9z"/><path d="M8.5 11v3M7 12.5h3M16 12h.01"/>'),
+  shop: ico('<path d="M5 9h14l-1.2 10.5H6.2z"/><path d="M9 9V7.5a3 3 0 0 1 6 0V9"/>'),
 };
 const SETTINGS_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3.2"/><path d="M12 2.8v2.6M12 18.6v2.6M2.8 12h2.6M18.6 12h2.6M5.5 5.5l1.8 1.8M16.7 16.7l1.8 1.8M5.5 18.5l1.8-1.8M16.7 7.3l1.8-1.8"/></svg>';
 
@@ -51,7 +57,7 @@ export interface RebootRuntime {
   i18n: I18n; places: LocalPlacesService | null; visit: PlaceVisit | null; games: GameRoomController | null; phone: MiiPhone | null; phoneView: MiiPhoneView | null;
   feed: LocalSocialService | null; feedSim: FeedSimulator | null; miinstagram: MIInstagramApp | null; relations: Relations; placeBar: PlaceBar | null; gameView: GameRoomView | null;
   /** R6 */
-  settings: SettingsStore;
+  settings: SettingsStore; wallet: Wallet | null; inventory: Inventory | null;
   dispose(): void;
 }
 
@@ -144,6 +150,10 @@ export function bootReboot(host: RebootHost, opts: { serverUrl?: string | null; 
     return (sc === 'room' && !host.visiting()) || (sc.startsWith('place:') && visit?.mode === 'inside') ? !games?.sessionActive : false;
   };
   const phone = flags.on('MIIPHONE_ENABLED') ? new MiiPhone(apps, phoneAllowed) : null;
+  // R6.0b: coins earned by playing (NEW economy) and the Reboot shop's inventory
+  const wallet = flags.on('SHOP_ENABLED') ? new Wallet(kv) : null;
+  const inventory = wallet ? new Inventory(kv, wallet) : null;
+  const look = (kind: 'cover' | 'card' | 'frame') => { const it = inventory ? itemById(inventory.equipped(kind)) : null; return it && !it.starter ? { a: it.a, b: it.b } : null; };
   const miinstagram = feed && phone ? new MIInstagramApp({
     svc: feed, i18n, me: 'host',
     directory: () => ({ name: nameOf, personality: (id) => (id === 'host' ? host.profile().personality : friendCache.find((f) => f.id === id)?.personality ?? 2) }),
@@ -151,6 +161,7 @@ export function bootReboot(host: RebootHost, opts: { serverUrl?: string | null; 
     openMiifoto: flags.on('MIIFOTO2_ENABLED') ? () => host.openMiifoto() : null,
     closePhone: () => phone.forceClose(),
     confirm: () => settings.value.confirm,
+    frame: () => look('frame'),
   }) : null;
   // ---- R6: the MiiPhone as the hub of Reboot. Order = home screen order. Shortcuts move for real through the Piazza.
   const relationsOf = (a: string, b: string) => relations.get(a, b);
@@ -160,6 +171,7 @@ export function bootReboot(host: RebootHost, opts: { serverUrl?: string | null; 
       i18n, me: 'host', profile: () => host.profile(), friends, closeness: relationsOf,
       posts: feed ? () => feed.postsBy('host') : null, photo: (id) => feed?.photo(id) ?? Promise.resolve(null),
       stats: games ? () => games.stats : null, openApp: (id) => { phone?.launch(id); },
+      card: () => look('card'), coins: wallet ? () => wallet.balance : null,
     }),
   });
   /** A move started from the phone: through the Piazza model, with its own errors (already translated). */
@@ -190,12 +202,59 @@ export function bootReboot(host: RebootHost, opts: { serverUrl?: string | null; 
     });
     if (games) apps.register({ id: 'games', titleKey: 'app.games', icon: APP_ICONS.games, color: 'var(--r-purple)', implemented: true, action: () => move('games') });
   }
+  if (wallet && inventory) apps.register({
+    id: 'shop', titleKey: 'app.shop', icon: APP_ICONS.shop, color: 'linear-gradient(150deg, #ffc83d, #e08a00)', implemented: true,
+    mount: shopApp({ i18n, wallet, inventory, confirm: () => settings.value.confirm, previewCover: (id) => applyCover(id) }),
+  });
   apps.register({
     id: 'settings', titleKey: 'app.settings', icon: SETTINGS_ICON, color: 'var(--r-ink-3)', implemented: true,
     mount: settingsApp(settings, i18n, { name: () => host.profile().name, rename: (n) => host.setPlayerName(n) }),
   });
   const phoneView = phone ? new MiiPhoneView(phone, i18n, layer) : null;
   if (miinstagram && phoneView) unsubs.push(miinstagram.onUnseen((n) => phoneView.notify(settings.value.notifications ? n : 0)));
+
+  // R6.0b: the cover in use (or tried in the shop) colours the MiiPhone; coins are earned by real events
+  function applyCover(tryId: string | null = null) {
+    const it = itemById(tryId ?? inventory?.equipped('cover') ?? '');
+    for (const [k, v] of [['--mp-a', it && !it.starter ? it.a : ''], ['--mp-b', it && !it.starter ? it.b : ''], ['--mp-shadow', it && !it.starter ? `color-mix(in srgb, ${it.b} 70%, #000)` : '']]) {
+      if (v) layer.style.setProperty(k, v); else layer.style.removeProperty(k);
+    }
+  }
+  if (wallet && inventory) {
+    applyCover();
+    unsubs.push(inventory.subscribe(() => applyCover()));
+    let toastTimer = 0;
+    unsubs.push(wallet.subscribe((e) => {
+      if (e.type !== 'earned' || !settings.value.notifications) return;
+      let el = layer.querySelector<HTMLElement>('.r-toast.wallet');
+      if (!el) { el = document.createElement('p'); el.className = 'r-toast wallet'; el.setAttribute('role', 'status'); layer.append(el); }
+      el.innerHTML = `${COIN_ICON}<span></span>`; el.querySelector('span')!.textContent = i18n.t('wallet.toast', { n: e.entry.amount, why: i18n.t(e.entry.reason, e.entry.vars) });
+      el.hidden = false; el.style.animation = 'none'; void el.offsetWidth; el.style.animation = '';
+      clearTimeout(toastTimer); toastTimer = window.setTimeout(() => { if (el) el.hidden = true; }, 2800);
+    }));
+    unsubs.push(() => clearTimeout(toastTimer));
+    wallet.earn('welcome', { once: 'welcome' });
+    wallet.earn('daily');
+    if (games) unsubs.push(games.subscribe((e) => {
+      if (e.type !== 'session' || e.e.type !== 'finished') return;
+      const me = e.e.result.players.find((p) => p.id === 'host'); if (!me) return;
+      wallet.earn('game.played');
+      if (me.rank === 1 && me.score > 0) wallet.earn('game.win');
+      // the controller records the badge when the match ends: read it right after
+      queueMicrotask(() => { for (const b of games.stats.badges) wallet.earn('game.badge', { once: 'badge:' + b, vars: { name: '@reward.' + b } }); });
+    }));
+    if (feed) unsubs.push(feed.subscribe((e) => { if (e.type === 'post.created' && e.post.authorId === 'host' && e.post.kind === 'photo') wallet.earn('post.photo'); }));
+    if (visit && places) unsubs.push(visit.subscribe((e) => {
+      if (e.type !== 'entered') return;
+      const p = places.place(e.roomId); if (p?.kind !== 'friend' || !p.owner) return;
+      wallet.earn('visit.friend', { once: `visit:${p.owner.id}:${new Date().toDateString()}`, vars: { name: p.owner.name } });
+    }));
+    unsubs.push(relations.subscribe((a, b, before, after) => {
+      const other = a === 'host' ? b : b === 'host' ? a : null; if (!other) return;
+      const lv = relationLevel(after).level;
+      if (lv > relationLevel(before).level) wallet.earn('friend.level', { once: `level:${other}:${lv}`, vars: { name: nameOf(other) ?? '', level: `@rel.${lv}` } });
+    }));
+  }
 
   // R6: apply the settings now and on every change (volumes, 3D quality, motion, date region, light mode)
   const osReduced = () => { try { return matchMedia('(prefers-reduced-motion: reduce)').matches; } catch { return false; } };
@@ -220,7 +279,7 @@ export function bootReboot(host: RebootHost, opts: { serverUrl?: string | null; 
   }
 
   return {
-    flags, multi, social, rooms, hub, hubScreen, panel, api, i18n, places, visit, games, phone, phoneView, feed, feedSim, miinstagram, relations, placeBar, gameView, settings,
+    flags, multi, social, rooms, hub, hubScreen, panel, api, i18n, places, visit, games, phone, phoneView, feed, feedSim, miinstagram, relations, placeBar, gameView, settings, wallet, inventory,
     dispose() {
       for (const u of unsubs) u();
       delete document.documentElement.dataset.motion; host.setVolumes({ music: 1, effects: 1, voice: 1 }); host.setRenderQuality('high');

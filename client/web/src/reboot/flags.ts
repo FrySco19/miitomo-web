@@ -6,7 +6,7 @@
 export type FlagId =
   | 'REBOOT_ENABLED' | 'MULTI_MII_ENABLED' | 'SOCIAL_LIFE_ENABLED' | 'PUBLIC_ROOMS_ENABLED' | 'HUB_ENABLED' | 'MIINSTAGRAM_ENABLED'
   | 'MINIGAMES_ENABLED' | 'EVENTS_ENABLED' | 'REWARDS_ENABLED' | 'NOTIFICATIONS_ENABLED' | 'MIIFOTO2_ENABLED'
-  | 'FRIEND_ROOMS_ENABLED' | 'MIIPHONE_ENABLED';
+  | 'FRIEND_ROOMS_ENABLED' | 'MIIPHONE_ENABLED' | 'SHOP_ENABLED';
 
 export interface FlagDef {
   id: FlagId;
@@ -28,6 +28,7 @@ export const FLAGS: readonly FlagDef[] = [
   { id: 'FRIEND_ROOMS_ENABLED', label: 'Stanze degli amici', phase: 'R5', implemented: true, defaultOn: true },
   { id: 'MIIPHONE_ENABLED', label: 'MiiPhone', phase: 'R5', implemented: true, defaultOn: true },
   { id: 'MIINSTAGRAM_ENABLED', label: 'MIInstagram', phase: 'R5', implemented: true, defaultOn: true },
+  { id: 'SHOP_ENABLED', label: 'Negozio Reboot e monete', phase: 'R6', implemented: true, defaultOn: true },
   { id: 'MINIGAMES_ENABLED', label: 'Sala Giochi (Quiz dei Mii)', phase: 'R5 · R6–R7', implemented: true, defaultOn: true },
   { id: 'EVENTS_ENABLED', label: 'Eventi', phase: 'R8', implemented: false, defaultOn: true },
   { id: 'REWARDS_ENABLED', label: 'Ricompense', phase: 'R8', implemented: false, defaultOn: true },

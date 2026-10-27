@@ -4,7 +4,7 @@
 .r5-layer [hidden] { display: none !important; }
 
 .mp-dock { position: fixed; right: max(10px, env(safe-area-inset-right)); top: 50%; translate: 0 -50%; border: 0; padding: 6px; background: none; cursor: pointer; z-index: var(--r-z-dock); -webkit-tap-highlight-color: transparent; }
-.mp-dock-body { position: relative; display: block; width: 44px; height: 74px; border-radius: 13px; background: linear-gradient(160deg, #ff9a52, var(--r-accent-hi)); box-shadow: 0 4px 0 var(--r-accent-shadow), 0 10px 22px rgba(0,0,0,.22); rotate: -7deg; transition: rotate var(--r-med) var(--r-ease-pop), translate var(--r-med) var(--r-ease-pop); }
+.mp-dock-body { position: relative; display: block; width: 44px; height: 74px; border-radius: 13px; background: linear-gradient(160deg, var(--mp-a, #ff9a52), var(--mp-b, var(--r-accent-hi))); box-shadow: 0 4px 0 var(--mp-shadow, var(--r-accent-shadow)), 0 10px 22px rgba(0,0,0,.22); rotate: -7deg; transition: rotate var(--r-med) var(--r-ease-pop), translate var(--r-med) var(--r-ease-pop); }
 .mp-dock:hover .mp-dock-body, .mp-dock:focus-visible .mp-dock-body { rotate: -2deg; translate: -3px -2px; }
 .mp-dock:active .mp-dock-body { translate: 0 2px; }
 .mp-dock:focus-visible { box-shadow: none; }
@@ -24,7 +24,7 @@
 @keyframes mp-in { from { transform: translateX(120%) rotate(8deg); opacity: .4; } to { transform: none; opacity: 1; } }
 @keyframes mp-out { from { transform: none; opacity: 1; } to { transform: translateX(120%) rotate(8deg); opacity: .3; } }
 @keyframes mp-fade { from { opacity: 0; } to { opacity: 1; } }
-.mp-frame { position: relative; height: 100%; box-sizing: border-box; border-radius: 42px; padding: 30px 12px 14px; background: linear-gradient(160deg, #ff9a52, var(--r-accent-hi)); box-shadow: 0 7px 0 var(--r-accent-shadow), 0 24px 60px rgba(0,0,0,.28); display: flex; flex-direction: column; }
+.mp-frame { position: relative; height: 100%; box-sizing: border-box; border-radius: 42px; padding: 30px 12px 14px; background: linear-gradient(160deg, var(--mp-a, #ff9a52), var(--mp-b, var(--r-accent-hi))); box-shadow: 0 7px 0 var(--mp-shadow, var(--r-accent-shadow)), 0 24px 60px rgba(0,0,0,.28); display: flex; flex-direction: column; }
 .mp-speaker { position: absolute; top: 12px; left: 50%; translate: -50% 0; width: 54px; height: 6px; border-radius: 6px; background: rgba(0,0,0,.22); }
 .mp-bar { display: flex; align-items: center; gap: var(--r-s2); padding: 0 4px var(--r-s2); color: #fff; }
 .mp-title { flex: 1; text-align: center; font-size: 17px; letter-spacing: .01em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-shadow: 0 1px 0 rgba(120,40,0,.35); }
