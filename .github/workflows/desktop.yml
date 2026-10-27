@@ -28,6 +28,8 @@ jobs:
         run: |
           npm i --no-save playwright@1.49.1
           xvfb-run -a node tests/desktop/desktop.e2e.mjs
+      - name: Desktop audio end-to-end (synthetic sound files: discovery, tables, AudioContext, MP3 decode, fallback, effect, voice message, mute, page changes, reopen)
+        run: xvfb-run -a node tests/desktop/audio.e2e.mjs
   windows-exe:
     runs-on: windows-latest
     needs: e2e-linux
