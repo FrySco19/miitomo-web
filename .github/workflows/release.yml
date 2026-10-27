@@ -1,0 +1,36 @@
+name: Release
+
+# Creates a GitHub release when a version tag (v*) is pushed.
+# Attaches the built web client (code only, no game files). Notes come from docs/releases/<tag>.md.
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: client/web/package-lock.json
+      - name: Build
+        working-directory: client/web
+        run: npm ci && npm run build
+      - name: Package the web client
+        run: |
+          cd client/web/dist
+          zip -r "../../../miitomo-web-${GITHUB_REF_NAME}-web.zip" .
+      - name: Create the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          notes="docs/releases/${GITHUB_REF_NAME}.md"
+          [ -f "$notes" ] || { echo "missing $notes"; exit 1; }
+          gh release create "$GITHUB_REF_NAME" "miitomo-web-${GITHUB_REF_NAME}-web.zip" \
+            --title "Miitomo Web ${GITHUB_REF_NAME}" --notes-file "$notes" --prerelease
