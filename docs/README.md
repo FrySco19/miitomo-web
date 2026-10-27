@@ -52,6 +52,8 @@
 | [reboot/GAME-ROOM.md](reboot/GAME-ROOM.md) | R5 Sala Giochi, game model, Quiz dei Mii |
 | [reboot/MIIPHONE.md](reboot/MIIPHONE.md) · [reboot/MIINSTAGRAM.md](reboot/MIINSTAGRAM.md) | R5 MiiPhone and MIInstagram |
 | [reboot/I18N.md](reboot/I18N.md) | R5 English + Italiano |
+| [reboot/R6-AUDIT.md](reboot/R6-AUDIT.md) · [reboot/R6.md](reboot/R6.md) | R6 / R7 audit and plan; R6 progress (implemented, tested, limits) |
+| [reboot/DESIGN-SYSTEM.md](reboot/DESIGN-SYSTEM.md) | R6 design tokens and components for every Reboot surface |
 | [reboot/SERVER.md](reboot/SERVER.md) | Planned own backend (R10); contracts already in the client |
 | [reboot/MINIGAMES.md](reboot/MINIGAMES.md) · [reboot/EVENTS.md](reboot/EVENTS.md) · [reboot/REWARDS.md](reboot/REWARDS.md) · [reboot/NOTIFICATIONS.md](reboot/NOTIFICATIONS.md) | Planned phases (design notes only) |
 
