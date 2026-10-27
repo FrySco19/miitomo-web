@@ -36,10 +36,17 @@ export class RoomSound {
   /** M17b: the original three switches (Layout/menu switchNode00 snd00 Musica, snd01 Effetti; Voce is the voice provider). */
   music = true;
   effects = true;
+  /** REBOOT settings: volume of each channel, 0..1, on top of the switches (Classic keeps 1 = the mix it always had). */
+  levels = { music: 1, effects: 1 };
   setChannels(music: boolean, effects: boolean) {
     this.music = music; this.effects = effects;
-    if (this.bgmGain) this.bgmGain.gain.value = music ? 0.45 : 0;
-    if (this.seGain) this.seGain.gain.value = effects ? 0.9 : 0;
+    if (this.bgmGain) this.bgmGain.gain.value = music ? 0.45 * this.levels.music : 0;
+    if (this.seGain) this.seGain.gain.value = effects ? 0.9 * this.levels.effects : 0;
+  }
+  setLevels(music: number, effects: number) {
+    const c = (v: number) => (Number.isFinite(v) ? Math.max(0, Math.min(1, v)) : 1);
+    this.levels = { music: c(music), effects: c(effects) };
+    this.setChannels(this.music, this.effects);
   }
   readonly log: SoundLogEntry[] = [];
   readonly missing = new Set<string>();
@@ -79,8 +86,8 @@ export class RoomSound {
     try {
       const AC = window.AudioContext ?? (window as any).webkitAudioContext;
       this.ctx = new AC();
-      this.seGain = this.ctx.createGain(); this.seGain.gain.value = this.effects ? 0.9 : 0; this.seGain.connect(this.ctx.destination);   // APPROXIMATED mix
-      this.bgmGain = this.ctx.createGain(); this.bgmGain.gain.value = this.music ? 0.45 : 0; this.bgmGain.connect(this.ctx.destination);
+      this.seGain = this.ctx.createGain(); this.seGain.gain.value = this.effects ? 0.9 * this.levels.effects : 0; this.seGain.connect(this.ctx.destination);   // APPROXIMATED mix
+      this.bgmGain = this.ctx.createGain(); this.bgmGain.gain.value = this.music ? 0.45 * this.levels.music : 0; this.bgmGain.connect(this.ctx.destination);
       this.resumeBgm();
     } catch (e) { this.ctx = null; console.warn('WebAudio non disponibile', e); }
   }

@@ -74,6 +74,14 @@ export interface RebootHost {
   setPhotoShare(p: { label: () => string; share: (dataUrl: string) => void } | null): void;
   /** Opens the (Classic) Miifoto screen. */
   openMiifoto(): void;
+
+  // ---- R6: Reboot settings applied to the shared infrastructure (Classic never calls them) ----
+  /** Channel volumes 0..1 on top of the original switches (BGM, sound effects, the browser voice). */
+  setVolumes(v: { music: number; effects: number; voice: number }): void;
+  /** Pixel-ratio cap of the 3D view: high = 2 (Classic), balanced = 1.5, low = 1. */
+  setRenderQuality(q: 'high' | 'balanced' | 'low'): void;
+  /** The user's display name (the Mii nickname of the save, max 10). false = refused (empty). */
+  setPlayerName(name: string): boolean;
 }
 
 export interface MiiView {

@@ -23,7 +23,7 @@ import { sanitizeFriend } from './social/Social';
 import { personalityType } from './play/Personality';
 import { Effects } from './effects/Effects';
 import { buildShop, meshBoxes, shopAvailable, ShopBuild } from './room/Shop';
-import { PROVIDERS, resolveVoice, speakable, DEFAULT_VOICE, VoicePref, VoiceParams, VoiceProvider } from './voice/Voice';
+import { PROVIDERS, resolveVoice, speakable, DEFAULT_VOICE, VoicePref, VoiceParams, VoiceProvider, setWebTtsPrefs } from './voice/Voice';
 import { line, label, textsAvailable, clearTextCache } from './room/RoomText';
 import { layoutAvailable, clearSpriteCache } from './room/LayoutSprites';
 import { Play, PlayApi, GuestSpec } from './play/Play';
@@ -38,7 +38,9 @@ const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as 
 // ---------------- Three.js stage ----------------
 const canvas = $<HTMLCanvasElement>('view');
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true, preserveDrawingBuffer: true });
-renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+/** Pixel-ratio cap of the 3D view. Classic: 2 (always). Reboot settings may lower it (quality / light mode). */
+let pixelCap = 2;
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, pixelCap));
 THREE.ColorManagement.enabled = false;               // the game writes shader output straight to the framebuffer
 renderer.outputColorSpace = THREE.LinearSRGBColorSpace;
 
@@ -338,6 +340,8 @@ let voiceParams: VoiceParams = { ...DEFAULT_VOICE };
 let voice: VoiceProvider = resolveVoice('silent');
 const voiceLog: { provider: string; classification: string; text: string }[] = [];
 let soundSw = { music: true, effects: true, voice: true };
+/** REBOOT settings: channel volumes 0..1 (Classic: 1, the original mix). */
+let soundLevels = { music: 1, effects: 1 };
 roomUi.onVoicePage = (text) => {
   if (!ui.audio || !soundSw.voice) return;
   const t = speakable(text); if (!t) return;
@@ -427,7 +431,7 @@ function setupRoom(s: Slot) {
   director.idleVariations = !LAB;
   interactables = director.boxes.map((b) => director!.interactable(b)).filter((x): x is Interactable => !!x);
   if (s.body) director.calibrate(s.body);
-  if (!sound) { sound = new RoomSound(); if (gestured) sound.unlock(); sound.setEnabled(ui.audio); sound.setChannels(soundSw.music, soundSw.effects); }
+  if (!sound) { sound = new RoomSound(); if (gestured) sound.unlock(); sound.setEnabled(ui.audio); sound.setLevels(soundLevels.music, soundLevels.effects); sound.setChannels(soundSw.music, soundSw.effects); }
   roomUi.root.hidden = false; roomUi.applySkin();
   roomUi.ctx = { nickname: nicknameOverride || lastName || 'Mii', female: lastGender === 'f', greetings: greetCtx() };
   if (!LAB) ui.roomCam = 'original';
@@ -458,7 +462,7 @@ let friendHost: Personality | null = null;   // M16: watching a friend's room â†
 let sceneMusic: string | null = null;
 function setMusic(key: string | null) {
   sceneMusic = key;
-  if (!sound) { sound = new RoomSound(); if (gestured) sound.unlock(); sound.setEnabled(ui.audio); sound.setChannels(soundSw.music, soundSw.effects); }
+  if (!sound) { sound = new RoomSound(); if (gestured) sound.unlock(); sound.setEnabled(ui.audio); sound.setLevels(soundLevels.music, soundLevels.effects); sound.setChannels(soundSw.music, soundSw.effects); }
   if (key) sound.bgm(key); else roomBgm();
 }
 function roomBgm() {
@@ -1531,6 +1535,10 @@ if (REBOOT_ON && play) {
     snapshot: (size) => snapshot(size),
     setPhotoShare: (p) => { play.photoShare = p; },
     openMiifoto: () => { void play.openMiifoto(); },
+    // R6: settings applied to the shared infrastructure (Classic never calls them: original mix, full quality)
+    setVolumes: (v) => { soundLevels = { music: v.music, effects: v.effects }; sound?.setLevels(v.music, v.effects); setWebTtsPrefs({ level: v.voice }); },
+    setRenderQuality: (q) => { pixelCap = q === 'low' ? 1 : q === 'balanced' ? 1.5 : 2; renderer.setPixelRatio(Math.min(window.devicePixelRatio, pixelCap)); resize(); },
+    setPlayerName: (name) => { const n = name.trim().slice(0, 10); if (!n) return false; play.save.profile.name = n; playApi.setNickname(n); void play.persist(); return true; },
   };
   import('./reboot/index').then((m) => { reboot = m.bootReboot(host); }).catch((e) => console.warn('Reboot non caricato (Classic continua):', e));
 }

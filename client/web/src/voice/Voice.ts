@@ -42,6 +42,14 @@ export function webTtsSettings(p: VoiceParams) {
     volume: Math.max(0.3, Math.min(1, 0.85 + 0.15 * n(p.energy)))
   };
 }
+/**
+ * REBOOT setting for the browser voice: a volume level (Settings → Mii voices). Classic never changes it (level 1, the
+ * behaviour it always had). The voice stays Italian: the spoken texts (original dialogue, Reboot chat lines) are Italian.
+ */
+const webTtsPrefs = { level: 1 };
+export function setWebTtsPrefs(p: { level?: number }) {
+  if (typeof p.level === 'number' && Number.isFinite(p.level)) webTtsPrefs.level = Math.max(0, Math.min(1, p.level));
+}
 class WebTts implements VoiceProvider {
   id = 'web-tts' as const; label = 'Sintesi vocale del browser'; classification: VoiceClass = 'APPROXIMATED_NON_ORIGINAL_TTS';
   private synth(): SpeechSynthesis | null { return typeof window !== 'undefined' && 'speechSynthesis' in window ? window.speechSynthesis : null; }
@@ -61,7 +69,7 @@ class WebTts implements VoiceProvider {
       s.cancel();
       const u = new SpeechSynthesisUtterance(text);
       const t = webTtsSettings(p);
-      u.voice = v; u.lang = v.lang; u.pitch = t.pitch; u.rate = t.rate; u.volume = t.volume;
+      u.voice = v; u.lang = v.lang; u.pitch = t.pitch; u.rate = t.rate; u.volume = t.volume * webTtsPrefs.level;
       s.speak(u);
     } catch (e) { console.warn('sintesi vocale non riuscita', e); }   // the dialogue never depends on the voice
   }

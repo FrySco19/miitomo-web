@@ -56,7 +56,8 @@ export class FakeHost implements RebootHost {
   onTick(cb: (dt: number) => void) { this.ticks.add(cb); return () => this.ticks.delete(cb); }
   onSpeech(cb: (e: { speaker: string | null }) => void) { this.speech.add(cb); return () => this.speech.delete(cb); }
   onPlayer(cb: (e: { id: string; kind: string }) => void) { this.player.add(cb); return () => this.player.delete(cb); }
-  profile() { return { name: 'Kelly', personality: 3 as const, birthday: { month: 5, day: 2 }, greeting: 'Eccomi!' }; }
+  playerName = 'Kelly';
+  profile() { return { name: this.playerName, personality: 3 as const, birthday: { month: 5, day: 2 }, greeting: 'Eccomi!' }; }
   visitPlace(p: PlaceScene) {
     if (this.scr !== 'room' && !this.scr.startsWith('place:')) return false;
     this.places.push(p.id); this.clearGuests(); this.scr = 'place:' + p.id;
@@ -70,6 +71,12 @@ export class FakeHost implements RebootHost {
   snapshot() { return this.scr === 'room' || this.scr.startsWith('place:') ? 'data:image/jpeg;base64,/9j/AAAA' : null; }
   setPhotoShare(p: { label: () => string; share: (u: string) => void } | null) { this.photoShare = p; }
   openMiifoto() { this.scr = 'miifoto'; }
+  // R6 settings hooks (recorded, so tests can check what the settings applied)
+  volumes = { music: 1, effects: 1, voice: 1 };
+  quality: 'high' | 'balanced' | 'low' = 'high';
+  setVolumes(v: { music: number; effects: number; voice: number }) { this.volumes = { ...v }; }
+  setRenderQuality(q: 'high' | 'balanced' | 'low') { this.quality = q; }
+  setPlayerName(name: string) { const n = name.trim().slice(0, 10); if (!n) return false; this.playerName = n; return true; }
   /** The player taps an object in the room (main.ts roomClick: asks the object policy first). */
   tapObject(name: string) { return !this.objectPolicy || this.objectPolicy(name) ? this.interact('host', name) : false; }
   /** One room step: walks, doors, reactions, then the tick listeners (like main.ts socialTick). */
