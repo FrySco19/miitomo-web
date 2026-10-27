@@ -96,7 +96,10 @@ export function bootReboot(host: RebootHost, opts: { serverUrl?: string | null; 
   host.root.append(layer);
 
   const wantFriends = flags.on('FRIEND_ROOMS_ENABLED'), wantGames = flags.on('MINIGAMES_ENABLED');
-  const places = wantFriends || wantGames ? new LocalPlacesService({ friends, blocked: () => local.safety().blocked }, opts.seed ?? 17) : null;
+  // 0.2: the simulated places are for the LOCAL friends only. A real friend (desktop P2P, id p2p-…) is never
+  // simulated (no fake room, no fake whereabouts): their presence and room are real (MiiPhone Friends → shared room).
+  const localFriends = async () => (await friends()).filter((f) => !f.id.startsWith('p2p-'));
+  const places = wantFriends || wantGames ? new LocalPlacesService({ friends: localFriends, blocked: () => local.safety().blocked }, opts.seed ?? 17) : null;
   const visit = places ? new PlaceVisit(host, places, {
     social,
     sceneOf: (id) => {
@@ -191,6 +194,7 @@ export function bootReboot(host: RebootHost, opts: { serverUrl?: string | null; 
     mount: friendsApp({
       i18n, me: 'host', friends, closeness: relationsOf,
       online: p2p ? () => p2p.online() : null,
+      real: p2p?.rooms ?? null,
       places: places && visit ? { whereIs: (id) => places.whereIs(id), refusalOf: (id) => places.refusalOf(id), current: () => places.current, subscribe: (cb) => places.subscribe(() => cb()) } : null,
       go: async (placeId) => {
         const r = await move(placeId === GAMES_ID ? 'games' : 'friends', placeId === GAMES_ID ? undefined : placeId);

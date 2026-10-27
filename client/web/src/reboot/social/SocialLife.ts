@@ -125,7 +125,7 @@ export class SocialLife {
   }
   isReserved(id: string) { return this.reserved.has(id); }
   /** Forget Miis that are no longer in the room right now (e.g. after the owner left a public room). */
-  resync() { this.views = new Map(this.host.miis().map((v) => [v.id, v])); for (const id of [...this.agents.keys()]) if (!this.views.has(id)) this.drop(id); }
+  resync() { this.views = new Map(this.host.miis().filter((v) => !v.remote).map((v) => [v.id, v])); for (const id of [...this.agents.keys()]) if (!this.views.has(id)) this.drop(id); }
   dispose() { for (const u of this.unsub) u(); this.unsub = []; this.subs.clear(); this.reserved.clear(); this.host.setGuestWander(true); }
 
   /** Debug / tests: what every Mii is doing right now. */
@@ -153,7 +153,8 @@ export class SocialLife {
   private note(type: string, ids: string[], info?: string) { this.log.push({ t: +this.now.toFixed(2), type, ids, info }); if (this.log.length > 400) this.log.shift(); }
 
   private step() {
-    this.views = new Map(this.host.miis().map((v) => [v.id, v]));
+    // real players' Miis (shared room) are theirs: never planned, moved or made to talk here
+    this.views = new Map(this.host.miis().filter((v) => !v.remote).map((v) => [v.id, v]));
     for (const v of this.views.values()) if (!this.agents.has(v.id) && !v.waiting && v.state !== 'outside') this.addAgent(v);
     for (const id of [...this.agents.keys()]) if (!this.views.has(id)) this.drop(id);
     for (const c of [...this.convos]) this.advance(c);

@@ -1,0 +1,28 @@
+/* SHARED ROOM overlay + friend rows (launcher, Classic, Reboot). Warm Miitomo-like palette, readable on small windows. */
+.mp-overlay { position: fixed; top: 10px; left: 50%; transform: translateX(-50%); z-index: 60; display: grid; gap: 6px; width: min(560px, calc(100vw - 24px)); pointer-events: none; font: 14px/1.35 system-ui, sans-serif; }
+.mp-overlay > * { pointer-events: auto; }
+.mp-card, .mp-bar, .mp-note { background: #fffaf3; color: #3b3129; border-radius: 14px; box-shadow: 0 4px 18px rgba(60, 40, 20, .18); padding: 10px 12px; }
+.mp-card { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: space-between; border: 2px solid #ffb35c; }
+.mp-card p { margin: 0; font-weight: 600; }
+.mp-card div { display: flex; gap: 6px; }
+.mp-card.wait { border-color: #e2d6c8; font-weight: 400; }
+.mp-bar { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; border: 2px solid #8fd16a; }
+.mp-bar.reconnecting { border-color: #e9a23b; }
+.mp-who { flex: 1 1 160px; color: #5d5147; }
+.mp-member.lost { color: #b5651d; }
+.mp-member small { color: #8a7d71; }
+.mp-warn { color: #b5651d; font-weight: 600; }
+.mp-note { text-align: center; }
+.mp-btn { appearance: none; border: 0; border-radius: 999px; padding: 6px 14px; background: #ff8a1f; color: #fff; font: inherit; font-weight: 700; cursor: pointer; }
+.mp-btn.ghost { background: #f1e7dc; color: #4b3f35; }
+.mp-btn:disabled { opacity: .5; cursor: default; }
+.mp-btn:focus-visible { outline: 3px solid #2b7de9; outline-offset: 2px; }
+.mp-friends { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.mp-friends li { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 8px 10px; border-radius: 12px; background: #fff; }
+.mp-fname { flex: 1 1 120px; font-weight: 700; }
+.mp-fname small { display: block; font-weight: 400; color: #7a6f66; font-size: 12px; }
+.mp-acts { display: flex; gap: 6px; flex-wrap: wrap; }
+.mp-tag { font-size: 12px; color: #7a6f66; align-self: center; }
+.mp-dot { width: 10px; height: 10px; border-radius: 50%; background: #c9bfb5; flex: none; }
+.mp-dot.on { background: #4cbb3a; } .mp-dot.busy { background: #e9a23b; } .mp-dot.room, .mp-dot.here { background: #2b9fe9; }
+@media (max-width: 520px) { .mp-overlay { top: 6px; } .mp-card, .mp-bar { padding: 8px 10px; } }

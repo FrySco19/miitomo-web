@@ -28,7 +28,9 @@ import { PERSONALITIES } from '../room/Expression';
 import { SaveData, newSave, loadSave, writeSave, deleteSave, migrate, b64, MAX_COORDINATES } from './Save';
 
 /** M18: a friend visiting the user's room. */
-export interface GuestSpec { id: string; name: string; miiData: Uint8Array; outfit: Outfit; height: number | null; build: number | null; personality: number[] | null; greetings: { welcome: string; goIn: string; seeingOff: string; goHome: string }; voice: SaveData['profile']['voice']; female?: boolean; }
+export interface GuestSpec { id: string; name: string; miiData: Uint8Array; outfit: Outfit; height: number | null; build: number | null; personality: number[] | null; greetings: { welcome: string; goIn: string; seeingOff: string; goHome: string }; voice: SaveData['profile']['voice']; female?: boolean;
+  /** 0.2 SHARED ROOM: a real player's Mii, moved only by that player (no wandering, no idle actions, no simulated plans). */
+  remote?: boolean; }
 export interface PlayApi {
   ready(): { engine: boolean; shader: boolean; room: boolean; anims: boolean; wardrobe: number; texts: boolean; expr: boolean };
   importFiles(files: File[]): Promise<void>;
@@ -347,6 +349,35 @@ export class Play {
     this.api.enterFresh(); this.api.rebuild();
     this.root.innerHTML = '';
     return true;
+  }
+  /**
+   * 0.2 SHARED ROOM (mp/SceneSync.ts): I am a guest in a real friend's room. MY Mii (my save, outfit, name, voice)
+   * comes in through the door of a room with THEIR look; their Mii is a separate room Mii moved by them. Nothing of
+   * this touches my save. The bar has only "back home" (the room, its furniture and its menus are the host's).
+   */
+  enterShared(room: { wall: string; floor: string; variant: number }, hostName: string) {
+    this.closeSheet();
+    this.api.guestEnd(); this.clearGuestTimers();
+    this.visiting = null; this.screen = 'sharedRoom';
+    this.api.setEditView(null); this.api.setMusic(null);
+    this.wearOwnMii();
+    this.api.setRoom(room.wall, room.floor, room.variant);
+    this.api.setFriendHost(null);
+    this.api.setScene('room');
+    this.api.enterFresh(); this.api.rebuild();
+    this.renderSharedBar(hostName);
+  }
+  /** Set by the page (main.ts): leave the shared room (engine session). */
+  onLeaveShared: (() => void) | null = null;
+  /** Set by the page: the shared-room actions for a real (P2P) friend — enter their room / invite them to mine. */
+  onP2PRoom: ((op: 'knock' | 'invite', id: string) => Promise<string>) | null = null;
+  private renderSharedBar(hostName: string) {
+    this.barOn = '';
+    this.root.innerHTML = `<nav class="pl-nav pl-fbar pl-sbar" aria-label="${esc(hostName)}">
+      <span class="pl-fname">${esc(hostName)}</span>
+      ${this.barBtn('home', 'home', T.tabs, 'title00@home00', 'Home', 'data-a')}
+    </nav><div class="pl-sheet" hidden></div>`;
+    this.on('home', () => this.onLeaveShared?.());
   }
   /** REBOOT: an extra action on the Miifoto screen ("share on MIInstagram"); null in Classic. */
   photoShare: { label: () => string; share: (dataUrl: string) => void } | null = null;
@@ -801,20 +832,28 @@ export class Play {
     const bd = (f: FriendProfile) => f.profile.birthday ? `${f.profile.birthday.day}/${f.profile.birthday.month}` : '';
     const s = this.sheet(`<h2>${esc(lb(CS, 'title00@roomUserFriendList', 'Lista di amici'))}</h2>
       <p class="pl-fcount" data-a="count">${esc(count)}</p>
-      <div class="pl-friends">${list.map((f) => `<div class="pl-friend" data-id="${f.id}"><button class="pl-friend-main" data-visit="${f.id}"><b>${esc(f.profile.name)}</b>${bd(f) ? `<small>${esc(bd(f))}</small>` : ''}</button><button class="pl-btn ghost small" data-del="${f.id}">${esc(lb(ML, 'title00@deleteFriend', 'Cancella amico'))}</button></div>`).join('')}</div>
+      <div class="pl-friends">${list.map((f) => `<div class="pl-friend" data-id="${f.id}"><button class="pl-friend-main" data-visit="${f.id}"><b>${esc(f.profile.name)}</b>${bd(f) ? `<small>${esc(bd(f))}</small>` : ''}</button>${f.source === 'p2p' && this.onP2PRoom ? `<button class="pl-btn small" data-invite="${f.id}">${esc(this.p2pLabel('invite'))}</button>` : ''}<button class="pl-btn ghost small" data-del="${f.id}">${esc(lb(ML, 'title00@deleteFriend', 'Cancella amico'))}</button></div>`).join('')}</div>
+      <p class="pl-small pl-fnote" role="status"></p>
       <div class="pl-actions"><button class="pl-btn primary" data-a="addfriend" ${why ? 'disabled' : ''}>${esc(lb(CS, 'title00@addfriendtopmenu00', 'Aggiungi/invita amico'))}</button></div>
       <p class="pl-small">${esc(why ?? 'Amici locali: profili Mii creati su questo dispositivo. Richieste di amicizia, codici amico, inviti e risposte degli amici erano dati del server Miitomo e arriveranno con il server di Miitomo Web.')}</p>
       <div class="pl-confirm" hidden></div>`);
     s.querySelector('[data-a=addfriend]')!.addEventListener('click', () => this.startFriendCreate());
     s.querySelectorAll<HTMLButtonElement>('[data-visit]').forEach((b) => b.addEventListener('click', () => {
       const f = list.find((x) => x.id === b.dataset.visit)!;
+      // 0.2: a REAL friend (P2P) → ask to enter their room for real (both Miis together); a friend made on this
+      // device keeps the original "watch their room" (their Mii alone, SequenceWatchFriend)
+      if (f.source === 'p2p' && this.onP2PRoom) { const op = this.onP2PRoom; this.confirm(s, line(D2, 'text00@goToMiiRoom'), [f.profile.name], `Vuoi visitare la stanza di ${f.profile.name}?`, () => { void op('knock', f.id).then((err) => this.friendNote(s, err)); }); return; }
       this.confirm(s, line(D2, 'text00@goToMiiRoom'), [f.profile.name], `Vuoi visitare la stanza di ${f.profile.name}?`, () => this.visitFriend(f));
     }));
+    s.querySelectorAll<HTMLButtonElement>('[data-invite]').forEach((b) => b.addEventListener('click', () => { const op = this.onP2PRoom; if (op) void op('invite', b.dataset.invite!).then((err) => this.friendNote(s, err)); }));
     s.querySelectorAll<HTMLButtonElement>('[data-del]').forEach((b) => b.addEventListener('click', () => {
       const f = list.find((x) => x.id === b.dataset.del)!;
       this.confirm(s, line('Layout/system/parts/layer1/dialog205.msbt', 'text00@confirmDeleteFriend'), [f.profile.name], 'Vuoi davvero cancellare questo amico?', async () => { await this.social.remove(f.id); this.openFriends(); });
     }));
   }
+  /** Label of the shared-room actions (set by the page with its language). */
+  p2pLabel: (k: 'invite') => string = () => 'Invita';
+  private friendNote(s: HTMLElement, err: string) { const n = s.querySelector<HTMLElement>('.pl-fnote'); if (n) n.textContent = err; }
   /** In-page confirmation (the viewer has no native dialogs): original dialog text + original Sì / No buttons. */
   private confirm(host: HTMLElement, l: ReturnType<typeof line>, names: string[], fb: string, yes: () => void) {
     const box = host.querySelector<HTMLElement>('.pl-confirm') ?? (() => { const d = document.createElement('div'); d.className = 'pl-confirm'; host.querySelector('.pl-sheet-card, .pl-fbar')?.append(d); return d; })();

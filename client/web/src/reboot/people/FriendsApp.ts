@@ -6,7 +6,7 @@
  * The list follows the places live (arrivals / departures) and the language.
  */
 import type { I18n } from '../i18n/i18n';
-import type { FriendInfo } from '../host';
+import type { FriendInfo, RebootRooms } from '../host';
 import type { PlaceError } from '../places/LocalPlacesService';
 import { relationLevel } from './levels';
 import './people.css';
@@ -23,6 +23,8 @@ export interface FriendsDeps {
   places: { whereIs: (id: string) => Where; refusalOf: (placeId: string) => PlaceError | null; current: () => string | null; subscribe: (cb: () => void) => () => void } | null;
   /** Desktop app: real friends connected peer-to-peer right now (null = not the desktop app). */
   online?: (() => string[]) | null;
+  /** 0.2 desktop app: a REAL friend's presence and the shared-room actions (Invite / Enter their room). */
+  real?: RebootRooms | null;
   /** Goes to a place (the phone closes on success); the message is already translated. */
   go: (placeId: string) => Promise<{ ok: boolean; message?: string }>;
 }
@@ -32,7 +34,19 @@ export function friendsApp(d: FriendsDeps) {
     let friends: FriendInfo[] = [], loaded = false, busy = '', msg = '', alive = true;
     const t = (k: string, v?: Record<string, string | number>) => d.i18n.t(k, v);
     const where = (w: Where) => t(w.at === 'room' ? 'where.room' : `where.${w.at}`, { name: w.ownerName });
+    /** A real friend: real presence, real actions (never the simulated places). */
+    const realRow = (f: FriendInfo, r: RebootRooms) => {
+      const p = r.presence(f.id), l = relationLevel(d.closeness(d.me, f.id));
+      const btn = (op: 'invite' | 'knock', on: boolean, label: string) => on ? `<button type="button" class="r-btn ${op === 'knock' ? 'primary' : ''} sm" data-real="${op}" data-id="${esc(f.id)}" ${busy ? 'disabled' : ''}>${esc(label)}</button>` : '';
+      return `<li class="r-row fa-row" data-id="${esc(f.id)}" data-real-friend>
+          <span class="r-avatar p${f.personality ?? 2}" aria-hidden="true">${esc((f.name.trim()[0] ?? '?').toUpperCase())}</span>
+          <span class="r-grow"><b>${esc(f.name)} <span class="r-chip ${p.state === 'off' ? '' : 'ok'} fa-pres-${p.state}">${esc(t('friends.real'))}</span></b>
+            <small class="fa-presence">${esc(p.text)}${p.pending ? ` · ${esc(t(p.pending === 'inv' ? 'friends.invited' : 'friends.asked'))}` : ''}</small>
+            <span class="fa-lv"><span class="r-chip lv${l.level}">${esc(t('rel.' + l.level))}</span></span>
+          </span><span class="fa-acts">${p.pending ? '' : btn('invite', p.canInvite, t('friends.invite')) + btn('knock', p.canEnter, t('friends.enter'))}</span></li>`;
+    };
     const row = (f: FriendInfo) => {
+      if (d.real && f.id.startsWith('p2p-')) return realRow(f, d.real);
       const l = relationLevel(d.closeness(d.me, f.id));
       const w = d.places?.whereIs(f.id) ?? null;
       const here = !!w?.placeId && d.places!.current() === w.placeId;
@@ -57,6 +71,8 @@ export function friendsApp(d: FriendsDeps) {
         </div>`;
     };
     const onClick = (e: Event) => {
+      const rb = (e.target as HTMLElement).closest<HTMLButtonElement>('[data-real]');
+      if (rb && d.real && !busy) { busy = 'real'; msg = ''; render(); void d.real.act(rb.dataset.real as 'invite' | 'knock', rb.dataset.id!).then((m) => { busy = ''; msg = m; render(); }); return; }
       const b = (e.target as HTMLElement).closest<HTMLButtonElement>('[data-go]'); if (!b || busy) return;
       busy = b.dataset.go!; msg = ''; render();
       void d.go(busy).then((r) => { busy = ''; msg = r.ok ? '' : r.message ?? ''; render(); });
@@ -64,6 +80,7 @@ export function friendsApp(d: FriendsDeps) {
     el.addEventListener('click', onClick);
     const unsubs: (() => unknown)[] = [d.i18n.subscribe(() => render())];
     if (d.places) unsubs.push(d.places.subscribe(() => render()));
+    if (d.real) unsubs.push(d.real.subscribe(() => render()));
     render();
     void d.friends().then((f) => { friends = f; loaded = true; render(); }, () => { loaded = true; render(); });
     return () => { alive = false; for (const u of unsubs) u(); el.removeEventListener('click', onClick); el.innerHTML = ''; };

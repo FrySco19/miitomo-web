@@ -42,6 +42,7 @@ export type DirectorEvent =
   | { type: 'frame'; name: string; frame: number }
   | { type: 'door'; name: 'doorAnimOpen' | 'doorAnimClose' }
   | { type: 'touch' }
+  | { type: 'wave' }
   | { type: 'reactionEnd'; kind: 'touch' | 'wave' | 'object' | 'greeting' | 'drop' | 'idleAction' | 'gesture' }
   | { type: 'gesture'; name: string }
   | { type: 'grab' } | { type: 'release' }
@@ -184,6 +185,18 @@ export class RoomDirector {
     this.pos.copy(pos); this.heading = heading; this.setState('idle'); this.play(this.idleName, true);
     this.fade = 0; this.cur.t = t;
   }
+  /**
+   * SHARED ROOM (0.2): puts an idle / walking Mii somewhere at once (network correction of a friend's Mii), through
+   * legal transitions only (walking → idle; idle stays idle), unlike restore() which is for a fresh director.
+   */
+  place(pos: THREE.Vector3, heading: number) {
+    if (this.state !== 'idle' && this.state !== 'walking') return this.ignore('place');
+    this.clearMove();
+    if (this.state === 'walking') this.setState('idle');
+    this.pos.copy(pos); this.heading = heading;
+    if (this.currentClip !== this.idleName) this.play(this.idleName, true);
+    return true;
+  }
   /** Time in the current clip (used to carry the idle phase over a rebuild). */
   get clipTime() { return this.cur.t; }
   exit() {
@@ -223,6 +236,7 @@ export class RoomDirector {
   waveReaction() {
     if (this.state !== 'idle') return this.ignore('wave');
     this.setState('reacting');
+    this.emit({ type: 'wave' });
     this.wave(() => { this.setState('idle'); this.emit({ type: 'reactionEnd', kind: 'wave' }); });
     return true;
   }

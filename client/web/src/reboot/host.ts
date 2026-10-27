@@ -101,10 +101,22 @@ export interface RebootP2P {
   on(ch: string, cb: (from: string, data: unknown) => void): () => void;
   /** A friend came online. */
   onOnline(cb: (id: string) => void): () => void;
+  /** 0.2 shared room: real presence and the real room actions (null = engine without multiplayer). */
+  rooms?: RebootRooms | null;
+}
+/** A real friend's presence and the shared-room actions (engine session), for the MiiPhone. */
+export interface RebootRooms {
+  /** off = offline · on = online · busy · room = in a room · here = in the room with me. */
+  presence(id: string): { state: 'off' | 'on' | 'busy' | 'room' | 'here'; text: string; canInvite: boolean; canEnter: boolean; pending: 'inv' | 'knock' | null };
+  /** Invite to my room / ask to enter theirs; resolves '' or a message in the game language. */
+  act(op: 'invite' | 'knock', id: string): Promise<string>;
+  subscribe(cb: () => void): () => void;
 }
 
 export interface MiiView {
   id: string; name: string; personality: 0 | 1 | 2 | 3; x: number; z: number; heading: number;
   /** RoomDirector state: outside / entering / idle / walking / interacting / reacting / exiting / held */
   state: string; isHost: boolean; leaving: boolean; waiting: boolean;
+  /** A real player's Mii in a shared room (0.2): moved only by that player — the social simulation leaves it alone. */
+  remote?: boolean;
 }

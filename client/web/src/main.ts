@@ -32,6 +32,10 @@ import { line, label, textsAvailable, clearTextCache, setLabelOverride } from '.
 import { layoutAvailable, clearSpriteCache } from './room/LayoutSprites';
 import { Play, PlayApi, GuestSpec } from './play/Play';
 import { clearClosetCache } from './play/Closet';
+import { b64 } from './play/Save';
+import type { MpAct, RoomSkin } from './p2p/session';
+import { SceneSync, SceneHost } from './mp/SceneSync';
+import { mountMpOverlay, mpError, mpText, presenceOf } from './mp/MpUi';
 
 /** PLAY (default) vs Lab (?lab=1, ?debug=1 or /lab): the Lab keeps every developer tool. */
 const LAB = (() => { const q = new URLSearchParams(location.search); return q.has('lab') || q.get('debug') === '1' || /\/lab\/?$/.test(location.pathname); })();
@@ -502,7 +506,9 @@ function onDirectorEvent(e: DirectorEvent) {
     case 'clip': sound?.clipStart(e.name); break;
     case 'frame': sound?.clipFrame(e.name, e.frame); break;
     case 'door': doorOwner = director; sound?.action(`doorAnim/${e.name}`); break;
-    case 'touch': sound?.play('se_nade01', 'SequenceTouch:se_nade01'); playEffect('arStroke'); break;   // SequenceTouch: animActionStroked + character/arStroke.xml (REVERSED table, M8)   // SequenceTouch table (REVERSED), timing DEDUCED
+    case 'wave': emitLocalAct({ k: 'wave' }); break;
+    case 'interact': emitLocalAct({ k: 'interact', o: e.object }); break;
+    case 'touch': emitLocalAct({ k: 'touch' }); sound?.play('se_nade01', 'SequenceTouch:se_nade01'); playEffect('arStroke'); break;   // SequenceTouch: animActionStroked + character/arStroke.xml (REVERSED table, M8)   // SequenceTouch table (REVERSED), timing DEDUCED
     case 'grab': roomUi.close(true); sound?.play('se_ui_hand_00', 'SequenceTouch:se_ui_hand_00'); break;   // DEDUCED pairing
     case 'release': sound?.play('se_ui_hand_01', 'SequenceTouch:se_ui_hand_01'); break;
     case 'gesture': talkGesture = true; break;
@@ -651,6 +657,11 @@ type RenderCtxT = { nickname: string; female: boolean; greetings: Record<string,
  * at a time: arrivals wait their turn).
  */
 export const MAX_GUESTS = 7;          // host + 7 = 8 Miis (Reboot target)
+// 0.2 SHARED ROOM (mp/SceneSync.ts): a session with real players is on; my Mii's actions go to them
+let mpActive = false;
+let mpCapSaved: number | null = null;
+const localActListeners = new Set<(a: MpAct) => void>();
+function emitLocalAct(a: MpAct) { for (const l of localActListeners) { try { l(a); } catch (e) { console.warn(e); } } }
 const guests: Guest[] = [];
 const guestListeners = new Set<(e: { type: 'arrive' | 'leave'; id: string; name: string }) => void>();
 function emitGuest(e: { type: 'arrive' | 'leave'; id: string; name: string }) { playApi.onGuest?.(e); for (const l of guestListeners) { try { l(e); } catch (err) { console.warn(err); } } }
@@ -678,10 +689,10 @@ function emitSpeech(speaker: string | null) { for (const l of speechListeners) {
 function emitPlayer(id: string, kind: string) { for (const l of playerListeners) { try { l({ id, kind }); } catch (e) { console.warn(e); } } }
 function directorOf(id: string): RoomDirector | null { return id === 'host' ? director : guests.find((g) => g.spec.id === id)?.director ?? null; }
 function miiViews() {
-  const v = (id: string, name: string, p: Personality, d: RoomDirector, extra: { isHost: boolean; leaving: boolean; waiting: boolean }) =>
+  const v = (id: string, name: string, p: Personality, d: RoomDirector, extra: { isHost: boolean; leaving: boolean; waiting: boolean; remote: boolean }) =>
     ({ id, name, personality: p, x: d.pos.x, z: d.pos.z, heading: d.heading, state: d.state as string, ...extra });
-  const out = director ? [v('host', nicknameOverride || lastName || 'Mii', personality, director, { isHost: true, leaving: false, waiting: false })] : [];
-  for (const g of guests) out.push(v(g.spec.id, g.spec.name, g.personality, g.director, { isHost: false, leaving: g.leaving, waiting: waiting.some((q) => q.g === g) }));
+  const out = director ? [v('host', nicknameOverride || lastName || 'Mii', personality, director, { isHost: true, leaving: false, waiting: false, remote: false })] : [];
+  for (const g of guests) out.push(v(g.spec.id, g.spec.name, g.personality, g.director, { isHost: false, leaving: g.leaving, waiting: waiting.some((q) => q.g === g), remote: !!g.spec.remote }));
   return out;
 }
 let sayN = 0;
@@ -768,6 +779,8 @@ function arrivalSpot(): THREE.Vector3 {
   return director!.clampToRoom(new THREE.Vector3(8, 0, 4));
 }
 async function guestArrive(sp: GuestSpec, opts?: { inside?: { x: number; z: number } }): Promise<boolean> {
+  // 0.2 shared room: while real players share the room, no simulated visitor (it would exist on this screen only)
+  if (mpActive && !sp.remote) return false;
   const full = () => guests.length >= guestCap || guests.some((g) => g.spec.id === sp.id);
   if (full() || !room || !director || ui.scene !== 'room' || venue !== 'room' || !engine.ready) return false;
   const keys = Object.entries(sp.outfit).filter(([k, v]) => k !== 'tuck' && v).map(([c, v]) => `asset/model/character/${CAT_DIR[c as Category]}/output/${CAT_DIR[c as Category]}${(v as { id: string }).id}`);
@@ -790,7 +803,7 @@ async function guestArrive(sp: GuestSpec, opts?: { inside?: { x: number; z: numb
   if (full() || !room || !director) { disposeSlot(built.slot); return false; }
   pivot.add(built.slot.root);
   const gd = new RoomDirector(orig.anims, built.female, room.doorOpen, room.doorClose);
-  gd.boxes = director.boxes; gd.idleVariations = !LAB; gd.wander = guestWanderOn;
+  gd.boxes = director.boxes; gd.idleVariations = !LAB && !sp.remote; gd.wander = guestWanderOn && !sp.remote;
   gd.reseed(++guestSerial);
   if (built.slot.body) gd.calibrate(built.slot.body);
   const n = guests.length;
@@ -990,7 +1003,12 @@ function roomClick(cx: number, cy: number): string {
   switch (p.kind) {
     case 'door': director.state === 'outside' ? director.enter() : director.exit(); return 'door';
     case 'mii': director.touch(); return 'mii';
-    case 'guest': { const g = guests.find((x) => x.spec.id === p.guestId); if (g && !g.leaving) g.director.touch(); return 'guest'; }   // SequenceTouch on the friend (DEDUCED)
+    case 'guest': {
+      const g = guests.find((x) => x.spec.id === p.guestId);
+      // 0.2: a real player's Mii is theirs — the tap goes to them and THEIR Mii reacts (and everybody sees it)
+      if (g?.spec.remote) { emitLocalAct({ k: 'poke', o: g.spec.id }); return 'guest-poke'; }
+      if (g && !g.leaving) g.director.touch(); return 'guest';   // SequenceTouch on the friend (DEDUCED)
+    }
     case 'object': if (objectPolicy && !objectPolicy(p.name)) return 'object-denied:' + p.name; director.interact(p.obj!); return 'object:' + p.name;
     case 'furniture': director.goTo(new THREE.Vector3(p.point!.x, 0, p.point!.z)); return 'furniture:' + p.name;
     case 'floor': director.goTo(p.point!); return 'floor';
@@ -1504,6 +1522,19 @@ function p2pBridge(c: P2PClient) {
     send: (ch: string, data: unknown, to?: string) => { void c.send(ch, data, to); },
     on: (ch: string, cb: (from: string, data: unknown) => void) => c.on(ch, cb),
     onOnline: (cb: (id: string) => void) => { let was = new Set((c.state?.friends ?? []).filter((f) => f.online).map((f) => f.id)); const un = c.onState((s) => { const now = new Set(s.friends.filter((f) => f.online).map((f) => f.id)); for (const id of now) if (!was.has(id)) cb(id); was = now; }); return () => { un(); }; },
+    // 0.2: real presence + the shared-room actions for the MiiPhone (same engine ops as the launcher and Classic)
+    rooms: {
+      presence: (id: string) => {
+        const f = c.state?.friends.find((x) => x.id === id), mp = c.mp;
+        if (!f) return { state: 'off' as const, text: mpText().offline, canInvite: false, canEnter: false, pending: null };
+        const p = presenceOf(f, mp);
+        const state = p.cls === 'here' ? 'here' as const : p.cls === 'room' ? 'room' as const : p.cls === 'busy' ? 'busy' as const : p.cls === 'on' ? 'on' as const : 'off' as const;
+        const pend = mp?.pending.find((x) => x.to === id && (x.kind === 'inv' || x.kind === 'knock'));
+        return { state, text: p.text, canInvite: f.online && state !== 'here' && mp?.session?.role !== 'guest', canEnter: f.online && state !== 'here' && state !== 'busy' && (state !== 'room' || f.room?.host === id), pending: (pend?.kind as 'inv' | 'knock' | undefined) ?? null };
+      },
+      act: async (op: 'invite' | 'knock', id: string) => { const r = await c.request(op === 'invite' ? 'mp.invite' : 'mp.knock', { to: id }); return r.ok ? '' : mpError(String(r.code)); },
+      subscribe: (cb: () => void) => { const a = c.onState(() => cb()), b = c.onMp(() => cb()); return () => { a(); b(); }; },
+    },
   };
 }
 const LAUNCHER = !LAB && new URLSearchParams(location.search).get('launcher') === '1';
@@ -1572,6 +1603,60 @@ async function diagnostics() {
 /** The account's P2P engine (hidden page of the desktop app); its friends join the game's friends. */
 const p2p = DESKTOP && play ? new P2PClient() : null;
 if (p2p && play) play.social = withP2P(play.social, p2p);
+
+// ---------------- SHARED ROOM (0.2): the multiplayer session of the engine, drawn with the real room machinery ----
+/** Where the shared room shows (guest: the host's room look; host: my room) — applied once Play is in a room screen. */
+let mpWant: { room: RoomSkin | null; info: { role: 'host' | 'guest'; hostName: string } | null } | null = null;
+let mpSync: SceneSync | null = null;
+function mpApplyShow() {
+  if (!mpWant || !play) return;
+  const sc = play.currentScreen;
+  if (sc !== 'room' && sc !== 'sharedRoom' && !sc.startsWith('place:') && sc !== 'friendRoom') return;   // boot / setup / Mii creation: later
+  const w = mpWant; mpWant = null;
+  if (w.info?.role === 'guest' && w.room) play.enterShared(w.room, w.info.hostName);
+  else if (sc !== 'room') play.startRoom(true);     // host: my own room; session over: back home
+}
+const mpHost: SceneHost = {
+  roomReady: () => !!room && !!director && ui.scene === 'room' && venue === 'room' && !coldWait && !mpWant,
+  local: () => director,
+  objects: () => interactables,
+  remote: (id) => guests.find((g) => g.spec.id === id && g.spec.remote)?.director ?? null,
+  spawn: async (id, payload, inside) => {
+    const p = payload as { profile?: unknown; outfit?: unknown; room?: unknown } | null;
+    const f = sanitizeFriend({ id, created: new Date(0).toISOString(), source: 'p2p', profile: p?.profile, outfit: p?.outfit ?? {}, room: p?.room ?? {}, visits: 0, lastVisit: null });
+    if (!f?.profile.miiData) return false;
+    const pr = f.profile;
+    mpCapSaved ??= guestCap; guestCap = Math.max(guestCap, guests.filter((g) => g.spec.remote).length + 1);
+    return guestArrive({ id, name: pr.name, miiData: b64.dec(pr.miiData!), outfit: f.outfit, height: pr.height, build: pr.build, personality: pr.personality, greetings: pr.greetings, voice: pr.voice, remote: true }, inside ? { inside } : undefined);
+  },
+  despawn: (id, viaDoor) => {
+    const g = guests.find((x) => x.spec.id === id && x.spec.remote); if (!g) return;
+    if (viaDoor && (g.director.state === 'idle' || g.director.state === 'walking')) waitDoor(g);   // goes out; removed once outside
+    else { disposeGuest(g); emitGuest({ type: 'leave', id: g.spec.id, name: g.spec.name }); }
+  },
+  say: (id, text, lang) => { void socialSay(id, text, 3, lang); },
+  showShared: (r, info) => { mpWant = { room: r, info }; mpApplyShow(); },
+  pokeLocal: () => { if (director && (director.state === 'idle' || director.state === 'walking')) { roomUi.close(true); director.touch(); } },
+  setActive: (on, seats) => {
+    if (on && !mpActive) for (const g of [...guests]) if (!g.spec.remote) disposeGuest(g);   // simulated visitors go
+    mpActive = on;
+    if (on) { mpCapSaved ??= guestCap; guestCap = Math.max(guestCap, seats); }
+    else if (mpCapSaved !== null) { guestCap = mpCapSaved; mpCapSaved = null; }
+  },
+  onTick: (cb) => { const f = (dt: number) => { mpApplyShow(); cb(dt); }; tickListeners.add(f); return () => tickListeners.delete(f); },
+  onLocalAct: (cb) => { localActListeners.add(cb); return () => localActListeners.delete(cb); },
+};
+if (p2p && play) {
+  play.onP2PRoom = async (op, id) => { const r = await p2p.request(op === 'knock' ? 'mp.knock' : 'mp.invite', { to: id }); return r.ok ? '' : mpError(String(r.code)); };
+  play.p2pLabel = () => mpText().invite;
+}
+if (p2p && play && !LAUNCHER && !LAB) {
+  mpSync = new SceneSync(p2p, mpHost);
+  play.onLeaveShared = () => { void p2p.request('mp.leave', {}); };
+  // the room screen may come after the session (boot, setup): try again until it can be shown
+  window.setInterval(mpApplyShow, 500);
+}
+if (p2p && play && !LAB) mountMpOverlay(document.body, p2p, LAUNCHER ? {} : { wave: () => { roomUi.close(true); director?.waveReaction(); } });
 if (LAUNCHER && play) {
   if (DESKTOP) gestured = true;   // the desktop app allows sound without a first click
   void import('./launcher/Launcher').then((m) => m.mountLauncher({
@@ -1609,7 +1694,7 @@ if (REBOOT_ON && play) {
     wave: (id) => { const d = directorOf(id); return !!d && d.waveReaction(); },
     say: (id, text, autoClose, lang) => socialSay(id, text, autoClose, lang),
     balloonBusy: () => roomUi.isOpen,
-    setGuestWander: (on) => { guestWanderOn = on; for (const g of guests) g.director.wander = on; },
+    setGuestWander: (on) => { guestWanderOn = on; for (const g of guests) g.director.wander = on && !g.spec.remote; },
     onTick: (cb) => { tickListeners.add(cb); return () => tickListeners.delete(cb); },
     onSpeech: (cb) => { speechListeners.add(cb); return () => speechListeners.delete(cb); },
     onPlayer: (cb) => { playerListeners.add(cb); return () => playerListeners.delete(cb); },
@@ -1640,7 +1725,7 @@ function shopProbe() {
   const meshes = meshBoxes(b.model).map(({ name, box: bb }) => { const c = bb.getCenter(new THREE.Vector3()), z = bb.getSize(new THREE.Vector3()); return { name, c: c.toArray().map((v) => +v.toFixed(1)), s: z.toArray().map((v) => +v.toFixed(1)) }; });
   return { box: [b.box.min.toArray(), b.box.max.toArray()], n: meshes.length, big: meshes.sort((x, y) => y.s[0] * y.s[1] * y.s[2] - x.s[0] * x.s[1] * x.s[2]).slice(0, 25), lights: !!b.lights, build: b };
 }
-(window as any).__mtw = { get p2p() { return p2p; }, LAUNCHER, diagnostics, startMusic, testEffect, testVoice, measureMii: () => measureMii(slots[ui.shade === 'ab' ? 'original' : ui.shade] ?? null), get lastBuild() { return lastBuild; }, listenerCounts: () => ({ tick: tickListeners.size, speech: speechListeners.size, player: playerListeners.size, guest: guestListeners.size, pendingSays: pendingSays.length }), get reboot() { return reboot; }, REBOOT_ON, get framing() { return framing ? { dolly: framing.dolly, shiftNdc: framing.shiftNdc, position: framing.position.toArray(), target: framing.target.toArray() } : null; }, gestureInfo, get guest() { return guests[0] ?? null; }, get guests() { return guests; }, get talker() { return talker; }, guestLog, guestArrive, guestLeave, get doorOwner() { return doorOwner === director ? 'host' : doorOwner ? 'guest' : null; }, get soundSw() { return soundSw; }, ruleInfo, PERSONALITIES, touchMenu, ccam, closetCamZoom, closetCamPan, socialLib: { sanitizeFriend }, get venue() { return venue; }, shopProbe, effects, playEffect, vfs, voiceLog, get voice() { return voice; }, play, playApi, LAB, speakLog, get personality() { return personality; }, get emoFace() { return emoFace; }, floorAt, camera, simRoom, roomPick, testClock, get sound() { return sound; }, roomUi, get interactables() { return interactables; }, clock, stagePoint, get room() { return room; }, get director() { return director; }, roomClick, projectRoom, engine, ui, view, slots, outfit, OUTFIT_1, get lastRes() { return lastRes; }, get lastScale() { return lastScale; }, catalog, applyPose, rebuild, randomMii, onFiles, renderer, orig, get status() { return status; }, get miiData() { return miiData; }, set miiData(v: Uint8Array | null) { miiData = v; } };
+(window as any).__mtw = { get p2p() { return p2p; }, get mpSync() { return mpSync; }, get mpActive() { return mpActive; }, LAUNCHER, diagnostics, startMusic, testEffect, testVoice, measureMii: () => measureMii(slots[ui.shade === 'ab' ? 'original' : ui.shade] ?? null), get lastBuild() { return lastBuild; }, listenerCounts: () => ({ tick: tickListeners.size, speech: speechListeners.size, player: playerListeners.size, guest: guestListeners.size, pendingSays: pendingSays.length }), get reboot() { return reboot; }, REBOOT_ON, get framing() { return framing ? { dolly: framing.dolly, shiftNdc: framing.shiftNdc, position: framing.position.toArray(), target: framing.target.toArray() } : null; }, gestureInfo, get guest() { return guests[0] ?? null; }, get guests() { return guests; }, get talker() { return talker; }, guestLog, guestArrive, guestLeave, get doorOwner() { return doorOwner === director ? 'host' : doorOwner ? 'guest' : null; }, get soundSw() { return soundSw; }, ruleInfo, PERSONALITIES, touchMenu, ccam, closetCamZoom, closetCamPan, socialLib: { sanitizeFriend }, get venue() { return venue; }, shopProbe, effects, playEffect, vfs, voiceLog, get voice() { return voice; }, play, playApi, LAB, speakLog, get personality() { return personality; }, get emoFace() { return emoFace; }, floorAt, camera, simRoom, roomPick, testClock, get sound() { return sound; }, roomUi, get interactables() { return interactables; }, clock, stagePoint, get room() { return room; }, get director() { return director; }, roomClick, projectRoom, engine, ui, view, slots, outfit, OUTFIT_1, get lastRes() { return lastRes; }, get lastScale() { return lastScale; }, catalog, applyPose, rebuild, randomMii, onFiles, renderer, orig, get status() { return status; }, get miiData() { return miiData; }, set miiData(v: Uint8Array | null) { miiData = v; } };
 
 // Boot: restore cached files if present.
 (async () => {
