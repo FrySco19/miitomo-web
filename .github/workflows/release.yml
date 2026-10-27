@@ -1,10 +1,12 @@
 name: Release
 
-# Creates a GitHub release when a version tag (v*) is pushed.
-# Attaches the built web client (code only, no game files). Notes come from docs/releases/<tag>.md.
+# Creates a GitHub release (and its tag) for every docs/releases/<version>.md that has no release yet.
+# Attaches the built web client (code only, no game files). The notes file is the release text.
 on:
   push:
-    tags: ['v*']
+    branches: [main]
+    paths: ['docs/releases/**']
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -22,15 +24,14 @@ jobs:
       - name: Build
         working-directory: client/web
         run: npm ci && npm run build
-      - name: Package the web client
-        run: |
-          cd client/web/dist
-          zip -r "../../../miitomo-web-${GITHUB_REF_NAME}-web.zip" .
-      - name: Create the release
+      - name: Create missing releases
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          notes="docs/releases/${GITHUB_REF_NAME}.md"
-          [ -f "$notes" ] || { echo "missing $notes"; exit 1; }
-          gh release create "$GITHUB_REF_NAME" "miitomo-web-${GITHUB_REF_NAME}-web.zip" \
-            --title "Miitomo Web ${GITHUB_REF_NAME}" --notes-file "$notes" --prerelease
+          for notes in docs/releases/v*.md; do
+            v=$(basename "$notes" .md)
+            if gh release view "$v" >/dev/null 2>&1; then echo "$v already released"; continue; fi
+            (cd client/web/dist && zip -qr "../../../miitomo-web-$v-web.zip" .)
+            gh release create "$v" "miitomo-web-$v-web.zip" --target "$GITHUB_SHA" \
+              --title "Miitomo Web $v" --notes-file "$notes" --prerelease
+          done
