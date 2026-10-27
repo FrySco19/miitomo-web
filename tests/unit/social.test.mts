@@ -38,6 +38,8 @@ class FakeHost {
   onPlayer(cb: any) { this.player.add(cb); return () => this.player.delete(cb); }
   /** player taps a Mii: original touch reaction (stops walking, 2 s), closes the balloon (like the game) */
   tap(id: string) { const m = this.m(id); if (this.balloon) { const b = this.balloon; this.balloon = null; b.cb('interrupted'); } for (const l of this.player) l({ id, kind: id === 'host' ? 'mii' : 'guest' }); m.state = 'reacting'; m.tx = undefined; m.busyT = 2; }
+  /** the real engine's order (main.ts roomClick): player event first, then the balloon closes through its onClose ('done') */
+  tapEngine(id: string) { const m = this.m(id); for (const l of this.player) l({ id, kind: id === 'host' ? 'mii' : 'guest' }); if (this.balloon) { const b = this.balloon; this.balloon = null; b.cb('done'); } m.state = 'reacting'; m.tx = undefined; m.busyT = 2; }
   step(dt: number) {
     this.t += dt;
     for (const m of this.miisL) {
@@ -135,6 +137,21 @@ const flush = () => new Promise((r) => setTimeout(r, 0));
   ok('activities suspended by something more important are resumed', s.log.some((l) => l.type === 'suspend') ? s.log.some((l) => l.type === 'resume' && !/line/.test(l.info ?? '')) : true, s.log.filter((l) => l.type === 'suspend' || l.type === 'resume').slice(0, 6));
   s.dispose();
 }
+// ---- regression (r2b, 2026-10-27): a tap on the LAST line, in the engine's event order, pauses instead of ending the conversation
+{
+  const h = new FakeHost(3, [3, 3, 3]);
+  const s = new SocialLife(h as any, 11);
+  let tapped: { id: number; line: number; of: number } | null = null;
+  await h.run(400, 1 / 20, () => {
+    const c = s.conversations.find((x) => x.phase === 'talk' && x.line === x.of - 1);
+    if (!tapped && c && h.balloon && [c.a, c.b].includes(h.balloon.id)) { tapped = { id: c.id, line: c.line, of: c.of }; h.tapEngine(h.balloon.id); }
+  });
+  const t = tapped as { id: number; line: number; of: number } | null;
+  const pause = t && s.log.find((l) => l.type === 'pause' && (l.info ?? '').startsWith(`#${t.id} `));
+  const resume = t && s.log.find((l) => l.type === 'resume' && (l.info ?? '') === `#${t.id} line ${t.line}`);
+  ok('tap on the last line (engine order) pauses the conversation and resumes the same line', !!t && !!pause && !!resume, { t, pause, resume });
+  s.dispose();
+}
 // ---- 2 Miis and door states
 {
   const h = new FakeHost(2, [3, 3]);
@@ -148,6 +165,20 @@ const flush = () => new Promise((r) => setTimeout(r, 0));
   h.miisL.splice(1, 1);   // the guest leaves mid-whatever
   await h.run(5, 1 / 20);
   ok('a Mii that leaves ends its conversation cleanly', s.conversations.length === 0);
+  s.dispose();
+}
+// ---- regression (r3, 2026-10-27): an object activity suspended BEFORE a permission change must not run after it
+{
+  const h = new FakeHost(2, [3, 3]);
+  const s = new SocialLife(h as any, 5);
+  await h.run(2, 1 / 20);
+  const id = h.miisL.find((m) => m.id !== 'host')!.id;
+  const ag = (s as any).agents.get(id);
+  ag.suspended = { kind: 'inspect', object: 'shelf', started: true }; ag.plan = null; ag.convo = null; ag.next = 0;
+  const before = s.stats.activities.inspect;
+  s.setPolicy({ canUseObject: (who) => who === 'host' });
+  await h.run(5, 1 / 20);
+  ok('a suspended object activity is not resumed after the room forbids objects', s.stats.activities.inspect === before && !s.log.some((l) => l.type === 'inspect' && l.ids[0] === id), { before, after: s.stats.activities.inspect });
   s.dispose();
 }
 // ---- room policy (R3 public room): visitors not allowed to use objects never do

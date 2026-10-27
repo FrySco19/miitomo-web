@@ -135,6 +135,16 @@ have a few tone variants. Original greetings (MSBT tags 1.2–1.5) stay in the C
 - Timers sit in a small queue, and nothing polls per frame.
 - With 8 Miis a step reads 8 small views. Classic has no subscriber, so its hooks are empty loops.
 
+### Fixes (2026-10-27)
+
+- A tap on a Mii during the **last** line of a conversation used to end the conversation, because the balloon closed
+  by the tap counted as a finished line. A line closed while either partner is under the player lock is now an
+  interruption: the conversation pauses and resumes that line.
+- An object activity suspended (by a conversation or a tap) before the owner of a public room forbade objects could
+  resume afterwards. The room policy is now checked again whenever an object activity starts or resumes.
+
+Both have a regression test in `tests/unit/social.test.mts`.
+
 ### Not done yet (documented, intentionally minimal)
 
 - **No head-only look-at.** The skeleton supports it, but there is no head IK; glances turn the whole body.

@@ -182,8 +182,6 @@ Start with the [documentation index](docs/README.md). Key pages:
 - Some behaviour is approximated (path planning, timings, some shading and effects); each case is listed in the
   classification.
 - Reboot is local only: no accounts, no online play, no real other players yet.
-- Known Reboot bug: tapping a Mii while it says the **last** line of a conversation ends the conversation instead of
-  pausing it, because the closed balloon counts as a finished line. The `r2b` suite catches this intermittently.
 - The room camera is adapted to landscape PC windows; on a phone-shaped window the framing differs from the original.
 - Only the Italian text set has been tested.
 

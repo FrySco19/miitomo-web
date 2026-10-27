@@ -12,11 +12,11 @@
   "devDependencies": {
     "@types/three": "0.177.0",
     "typescript": "5.6.3",
-    "vite": "5.4.10"
+    "vite": "5.4.21"
   },
   "dependencies": {
     "ffl.js": "github:ariankordi/FFL.js#v2.2.2",
-    "fflate": "0.8.2",
+    "fflate": "0.8.3",
     "three": "0.177.0"
   },
   "private": true,

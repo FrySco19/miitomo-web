@@ -194,7 +194,8 @@ export class SocialLife {
     if (p.kind === 'rest') { this.stats.activities.rest++; a.next = p.until; return; }
     let ok = false;
     if (p.kind === 'wander' || p.kind === 'watch') { const q = this.clearOfDoor(p.x, p.z); ok = this.host.goTo(a.id, q.x, q.z); }
-    if (p.kind === 'inspect') ok = this.host.interact(a.id, p.object);
+    // the room policy is checked again here: a plan chosen (or suspended) before a permission change must not run after it
+    if (p.kind === 'inspect') ok = (!this.policy || this.policy.canUseObject(a.id, p.object)) && this.host.interact(a.id, p.object);
     if (!ok) { a.plan = null; a.next = this.now + this.r(1, 3); return; }
     p.started = true; this.stats.activities[p.kind]++; this.note(p.kind, [a.id], p.kind === 'inspect' ? p.object : undefined);
     a.next = this.now + 1;
@@ -296,6 +297,9 @@ export class SocialLife {
       void this.host.say(who, text, this.r(1.0, 1.6)).then((r) => {
         c.speaking = false;
         if (!this.convos.includes(c)) return;
+        // A balloon closed by the player's tap is an interruption, not a finished line (also on the last line).
+        const tapped = this.now < (this.agents.get(c.a)?.playerUntil ?? 0) || this.now < (this.agents.get(c.b)?.playerUntil ?? 0);
+        if (r === 'done' && tapped) { this.pause(c); return; }
         if (r === 'done') { c.line++; c.waitFloor = this.now; c.gapUntil = this.now + this.r(0.4, 1.2); if (c.line >= c.seq.length) this.end(c, 'done'); }
         else if (r === 'interrupted') this.pause(c);
         else c.gapUntil = this.now + 1;      // busy: try again
