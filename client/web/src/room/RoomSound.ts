@@ -158,6 +158,13 @@ export class RoomSound {
     });
     return file;
   }
+  /** Launcher: whether a BGM key resolves to a music file that the user imported (nothing is played). */
+  canPlay(key: string) {
+    const id = this.tables.get('Action/bgm')?.get(key)?.[0];
+    const wave = id ? this.first('BGM/common', id) : null;
+    const file = wave ? this.first('Wave/bgm', wave) : null;
+    return !!file && vfs.has(`sound/${file}`);
+  }
   stopBgm() { try { this.bgmNode?.stop(); } catch { /* */ } this.bgmNode?.disconnect(); this.bgmNode = null; }
   setEnabled(on: boolean) {
     this.enabled = on;

@@ -1,0 +1,71 @@
+/* LAUNCHER — over the live room (the user's Mii and music behind it). Same palette as the Reboot design tokens. */
+.ln { --ink: #3b3530; --ink2: #6b6058; --accent: #cc4b12; --accent-hi: #ff7a2f; --cream: #fffaf4;
+  position: fixed; inset: 0; z-index: 50; display: grid; grid-template-rows: auto 1fr auto; padding: max(16px, env(safe-area-inset-top)) 24px max(16px, env(safe-area-inset-bottom));
+  font-family: var(--pl-font, ui-rounded, "Nunito", "Segoe UI", system-ui, sans-serif); color: var(--ink);
+  background: radial-gradient(120% 90% at 50% 0%, #fff 0%, #ffeedd 50%, #ffd7b3 100%); transition: background .8s ease; }
+/* once the room is there, the Mii shows through the middle */
+.ln[data-screen="room"] { background: linear-gradient(180deg, rgba(255, 244, 232, .92) 0%, rgba(255, 244, 232, 0) 22%, rgba(255, 244, 232, 0) 58%, rgba(255, 236, 216, .96) 84%); }
+.ln-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; }
+.ln-logo .pl-logo { position: static; transform: none; margin: 0; }
+.ln-logo .pl-logo img { max-height: 76px; width: auto; height: auto; }
+.ln-acct { display: flex; align-items: center; gap: 10px; padding: 6px 8px 6px 6px; border-radius: 999px; background: rgba(255, 255, 255, .92); box-shadow: 0 3px 0 rgba(120, 70, 30, .12); }
+.ln-avatar { width: 38px; height: 38px; border-radius: 50%; display: grid; place-items: center; background: var(--accent-hi); color: #fff; font-weight: 800; }
+.ln-who { display: grid; line-height: 1.15; }
+.ln-who small { font-size: 11.5px; color: var(--ink2); letter-spacing: .03em; }
+.ln-btn { border: 0; border-radius: 999px; padding: 8px 14px; font: inherit; font-size: 13px; font-weight: 800; color: #fff; background: var(--accent); box-shadow: 0 3px 0 #9e3a0d; cursor: pointer; }
+.ln-btn.ghost { background: #f4ece4; color: var(--ink); box-shadow: 0 2px 0 rgba(60, 40, 20, .14); }
+.ln-choice { align-self: end; display: grid; grid-template-columns: repeat(2, minmax(0, 340px)); justify-content: center; gap: 18px; margin-bottom: 12px; }
+.ln-card { position: relative; display: grid; gap: 6px; text-align: left; border: 0; border-radius: 28px; padding: 22px 22px 18px; font: inherit; cursor: pointer; color: var(--ink);
+  background: var(--cream); box-shadow: 0 6px 0 rgba(150, 80, 30, .16), 0 16px 40px rgba(120, 60, 20, .16); transition: transform .18s cubic-bezier(.2, .9, .3, 1.15); animation: ln-in .5s cubic-bezier(.2, .9, .3, 1.15) both; }
+.ln-card.reboot { animation-delay: .08s; }
+.ln-card:hover, .ln-card:focus-visible { transform: translateY(-4px); }
+.ln-card:active { transform: translateY(2px); }
+.ln-card b { font-size: 24px; }
+.ln-card.classic b { color: var(--accent); }
+.ln-card.reboot b { color: #5b4cd6; }
+.ln-card span { font-size: 14px; color: var(--ink2); line-height: 1.35; }
+.ln-card em { justify-self: start; margin-top: 6px; font-style: normal; font-weight: 800; color: #fff; padding: 8px 18px; border-radius: 999px; background: var(--accent); box-shadow: 0 3px 0 #9e3a0d; }
+.ln-card.reboot em { background: #5b4cd6; box-shadow: 0 3px 0 #3b2fa0; }
+.ln-card small { font-size: 11px; font-weight: 800; letter-spacing: .04em; color: #5b4cd6; }
+@keyframes ln-in { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: none; } }
+.ln-foot { display: grid; justify-items: center; gap: 4px; text-align: center; }
+.ln-status { margin: 0; display: inline-flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 700; color: var(--ink2); background: rgba(255, 255, 255, .85); padding: 6px 14px; border-radius: 999px; }
+.ln-status.warn { color: #9a4e28; }
+.ln-files { font-size: 11.5px; color: var(--ink2); max-width: 90vw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ln-link { border: 0; background: none; font: inherit; font-weight: 800; color: #1b7f9e; text-decoration: underline; cursor: pointer; }
+.ln-spin { width: 14px; height: 14px; border-radius: 50%; border: 2px solid #ffe2c6; border-top-color: var(--accent-hi); animation: ln-spin 1s linear infinite; }
+@keyframes ln-spin { to { rotate: 360deg; } }
+.ln-sheet { position: fixed; inset: 0; display: grid; place-items: center; background: rgba(48, 36, 26, .28); z-index: 2; }
+.ln-sheet[hidden] { display: none; }
+.ln-sheet-in { width: min(560px, calc(100vw - 32px)); max-height: calc(100vh - 48px); overflow: auto; border-radius: 28px; background: var(--cream); padding: 18px 20px 20px; box-shadow: 0 24px 60px rgba(0, 0, 0, .25); }
+.ln-sheet-in > header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+.ln-sheet-in h2 { margin: 0; font-size: 22px; }
+.ln :focus-visible { outline: 3px solid #2aa5c9; outline-offset: 3px; }
+@media (max-width: 720px) { .ln-choice { grid-template-columns: 1fr; } .ln-card b { font-size: 20px; } }
+@media (prefers-reduced-motion: reduce) { .ln-card { animation: none; transition: none; } .ln-spin { animation: none; } }
+/* friends (P2P) sheet */
+.fp { display: grid; gap: 8px; font-size: 14px; }
+.fp h3 { margin: 10px 0 0; font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: #7a6f66; }
+.fp-me { margin: 0; padding: 10px 12px; border-radius: 14px; background: #fff; }
+.fp-me code { font-weight: 800; letter-spacing: .04em; }
+.fp-me small, .fp-name small { display: block; color: #7a6f66; font-size: 12px; }
+.fp-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.fp-list li { display: flex; align-items: center; gap: 10px; padding: 8px 8px 8px 12px; border-radius: 14px; background: #faf6f1; }
+.fp-name { flex: 1; min-width: 0; font-weight: 700; }
+.fp-acts { display: flex; gap: 6px; }
+.fp-dot { width: 10px; height: 10px; border-radius: 50%; background: #d3c7bc; flex: none; }
+.fp-dot.on { background: #3aa651; box-shadow: 0 0 0 3px #e2f6e4; }
+.fp-tag { font-size: 12px; font-weight: 700; color: #1b7f9e; }
+.fp-note { margin: 0; font-size: 12.5px; line-height: 1.4; color: #6b6058; }
+.fp-codes { display: grid; gap: 8px; }
+.fp-codes textarea, .fp-codes input:not([type="checkbox"]) { width: 100%; border: 2px solid #f1e3d4; border-radius: 12px; padding: 8px 10px; font: 12px/1.35 ui-monospace, Consolas, monospace; color: #3b3530; background: #fff; resize: vertical; }
+.fp-codes input { font-family: inherit; font-size: 13px; }
+.fp-row { display: flex; gap: 6px; align-items: center; }
+.fp-row input { flex: 1; }
+.fp-codes > .ln-btn { justify-self: start; }
+.fp-check { display: flex; gap: 8px; align-items: flex-start; font-size: 12.5px; color: #6b6058; }
+.fp-msg { margin: 0; min-height: 1.2em; font-weight: 700; color: #9a4e28; }
+.fp details summary { cursor: pointer; font-weight: 700; color: #1b7f9e; }
+/* the text logo (used when the user's APK logo is not imported yet) on the light launcher */
+.ln-logo .pl-logo-word { color: var(--accent); text-shadow: 0 3px 0 rgba(150, 70, 20, .18); }
+.ln-logo .pl-logo-sub { color: var(--ink2); }

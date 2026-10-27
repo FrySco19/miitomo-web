@@ -135,7 +135,8 @@ export class Play {
   readonly log: string[] = [];
 
   /** M16 friends: the gameplay only talks to the provider (LocalProvider now, our own ServerProvider later). */
-  readonly social: SocialProvider = new LocalProvider();
+  /** The desktop app wraps it to add the peer-to-peer friends (p2p/social.ts). */
+  social: SocialProvider = new LocalProvider();
   private visiting: FriendProfile | null = null;
   private makingFriend: SaveData['profile'] | null = null;
   /** The profile the creation screens edit: the user's own, or a new local friend's. */
@@ -176,6 +177,8 @@ export class Play {
       ${tip ? `<div class="pl-tip"><h3>${esc(lb(T.boot, 'text01', 'Consigli per l\'uso di Miitomo'))}</h3><p>${esc(tip)}</p></div>` : ''}
     </section>`;
   }
+  /** The launcher shows the same logo (from the user's APK when imported). */
+  get logo() { return this.logoHtml(); }
   /** bootRoot00: logo00 (word mark) + logo01 (badge) from the user's APK; plain text otherwise. */
   private logoHtml() {
     const a = sprite('texture00', 'logo00.png', BOOT_DIR), b = sprite('texture00', 'logo01.png', BOOT_DIR);
