@@ -22,7 +22,8 @@ export interface VoiceProvider {
   classification: VoiceClass;
   /** null = usable; otherwise why not (shown in Settings). */
   unavailable(): string | null;
-  speak(text: string, p: VoiceParams): void;
+  /** `lang` (R6, Reboot chat lines): language of the text; omitted = Italian. Providers without languages ignore it. */
+  speak(text: string, p: VoiceParams, lang?: string): void;
   stop(): void;
 }
 
@@ -44,7 +45,7 @@ export function webTtsSettings(p: VoiceParams) {
 }
 /**
  * REBOOT setting for the browser voice: a volume level (Settings → Mii voices). Classic never changes it (level 1, the
- * behaviour it always had). The voice stays Italian: the spoken texts (original dialogue, Reboot chat lines) are Italian.
+ * behaviour it always had). The voice is Italian, except for Reboot chat lines that say which language they are in.
  */
 const webTtsPrefs = { level: 1 };
 export function setWebTtsPrefs(p: { level?: number }) {
@@ -53,18 +54,18 @@ export function setWebTtsPrefs(p: { level?: number }) {
 class WebTts implements VoiceProvider {
   id = 'web-tts' as const; label = 'Sintesi vocale del browser'; classification: VoiceClass = 'APPROXIMATED_NON_ORIGINAL_TTS';
   private synth(): SpeechSynthesis | null { return typeof window !== 'undefined' && 'speechSynthesis' in window ? window.speechSynthesis : null; }
-  voice(): SpeechSynthesisVoice | null {
+  voice(lang = 'it'): SpeechSynthesisVoice | null {
     const s = this.synth(); if (!s) return null;
-    const vs = s.getVoices();
-    return vs.find((v) => v.lang?.toLowerCase().startsWith('it') && v.localService) ?? vs.find((v) => v.lang?.toLowerCase().startsWith('it')) ?? null;
+    const vs = s.getVoices(), by = (l: string) => vs.find((v) => v.lang?.toLowerCase().startsWith(l) && v.localService) ?? vs.find((v) => v.lang?.toLowerCase().startsWith(l));
+    return by(/^[a-z]{2}$/.test(lang) ? lang : 'it') ?? by('it') ?? null;
   }
   unavailable() {
     if (!this.synth()) return 'questo browser non ha la sintesi vocale (speechSynthesis)';
     if (!this.voice()) return 'nessuna voce italiana installata nel sistema';
     return null;
   }
-  speak(text: string, p: VoiceParams) {
-    const s = this.synth(), v = this.voice(); if (!s || !v || !text.trim()) return;
+  speak(text: string, p: VoiceParams, lang?: string) {
+    const s = this.synth(), v = this.voice(lang); if (!s || !v || !text.trim()) return;
     try {
       s.cancel();
       const u = new SpeechSynthesisUtterance(text);

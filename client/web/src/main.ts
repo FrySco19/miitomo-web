@@ -342,10 +342,12 @@ const voiceLog: { provider: string; classification: string; text: string }[] = [
 let soundSw = { music: true, effects: true, voice: true };
 /** REBOOT settings: channel volumes 0..1 (Classic: 1, the original mix). */
 let soundLevels = { music: 1, effects: 1 };
+/** REBOOT R6: language of a Reboot chat balloon (by label) for the voice; Classic balloons have none (Italian). */
+const sayLangs = new Map<string, string>();
 roomUi.onVoicePage = (text) => {
   if (!ui.audio || !soundSw.voice) return;
   const t = speakable(text); if (!t) return;
-  voice.speak(t, roomUi.speaker === 'guest' && talker ? talker.spec.voice : voiceParams);
+  voice.speak(t, roomUi.speaker === 'guest' && talker ? talker.spec.voice : voiceParams, sayLangs.get(roomUi.openLabel ?? ''));
   voiceLog.push({ provider: voice.id, classification: voice.classification, text: t }); if (voiceLog.length > 50) voiceLog.shift();
 };
 roomUi.onVoiceStop = () => voice.stop();
@@ -684,7 +686,7 @@ function miiViews() {
 let sayN = 0;
 const pendingSays: { label: string; done: (r: 'done' | 'interrupted') => void; seen: boolean }[] = [];
 /** One Mii says a line in the (single) room balloon. Resolves when it closes, or 'interrupted' if something replaced it. */
-function socialSay(id: string, text: string, autoClose: number): Promise<'done' | 'interrupted' | 'busy'> {
+function socialSay(id: string, text: string, autoClose: number, lang?: string): Promise<'done' | 'interrupted' | 'busy'> {
   if (roomUi.isOpen || ui.scene !== 'room' || venue !== 'room' || closetCam.on) return Promise.resolve('busy');
   const g = id === 'host' ? null : guests.find((x) => x.spec.id === id) ?? null;
   const d = directorOf(id);
@@ -692,7 +694,8 @@ function socialSay(id: string, text: string, autoClose: number): Promise<'done' 
   const label = `reboot:chat:${++sayN}`;
   return new Promise((res) => {
     let settled = false;
-    const done = (r: 'done' | 'interrupted') => { if (settled) return; settled = true; const i = pendingSays.findIndex((q) => q.label === label); if (i >= 0) pendingSays.splice(i, 1); res(r); };
+    const done = (r: 'done' | 'interrupted') => { if (settled) return; settled = true; sayLangs.delete(label); const i = pendingSays.findIndex((q) => q.label === label); if (i >= 0) pendingSays.splice(i, 1); res(r); };
+    if (lang) sayLangs.set(label, lang);
     pendingSays.push({ label, done, seen: false });
     const spec = { kind: 'chat' as const, rel: T_ROOM, label, fallback: text, text, autoClose, onClose: () => done('done') };
     if (g) guestSay(g, spec); else roomUi.show({ ...spec, speaker: 'host' });
@@ -1519,7 +1522,7 @@ if (REBOOT_ON && play) {
     face: (id, x, z) => new Promise<boolean>((res) => { const d = directorOf(id); if (!d) return res(false); if (!d.faceToward(new THREE.Vector3(x, 0, z), () => res(true))) res(false); }),
     interact: (id, name) => { const d = directorOf(id), o = interactables.find((x) => x.name === name); return !!d && !!o && d.interact(o); },
     wave: (id) => { const d = directorOf(id); return !!d && d.waveReaction(); },
-    say: (id, text, autoClose) => socialSay(id, text, autoClose),
+    say: (id, text, autoClose, lang) => socialSay(id, text, autoClose, lang),
     balloonBusy: () => roomUi.isOpen,
     setGuestWander: (on) => { guestWanderOn = on; for (const g of guests) g.director.wander = on; },
     onTick: (cb) => { tickListeners.add(cb); return () => tickListeners.delete(cb); },

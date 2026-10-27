@@ -43,7 +43,8 @@ export interface RebootHost {
   /** Original wave reaction. */
   wave(id: string): boolean;
   /** Say a line in the single room balloon (speaker's own voice / face / gesture). */
-  say(id: string, text: string, autoCloseSec: number): Promise<'done' | 'interrupted' | 'busy'>;
+  /** `lang` (R6): language of `text` for the voice; omitted = Italian (the voice Classic always used). */
+  say(id: string, text: string, autoCloseSec: number, lang?: string): Promise<'done' | 'interrupted' | 'busy'>;
   /** A balloon is open (player menu, greeting, another Mii talking). */
   balloonBusy(): boolean;
   /** Built-in M18 wandering of the guests (the social layer plans walks itself). */

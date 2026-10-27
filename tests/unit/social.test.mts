@@ -3,6 +3,8 @@
 // Run from client/web: npx tsx ../../tests/unit/social.test.mts
 import { SocialLife } from '../../client/web/src/reboot/social/SocialLife';
 import { TRAITS } from '../../client/web/src/reboot/social/traits';
+import { I18n } from '../../client/web/src/reboot/i18n/i18n';
+import { STRINGS } from '../../client/web/src/reboot/i18n/strings';
 
 let fails = 0; const ok = (n: string, c: unknown, i?: unknown) => { console.log(`${c ? 'PASS' : 'FAIL'} ${n}${c ? '' : ' ' + JSON.stringify(i)}`); if (!c) fails++; };
 
@@ -12,7 +14,7 @@ class FakeHost {
   miisL: M[] = [];
   balloon: { id: string; left: number; cb: (r: 'done' | 'interrupted') => void } | null = null;
   ticks = new Set<(dt: number) => void>(); speech = new Set<(e: { speaker: string | null }) => void>(); player = new Set<(e: { id: string; kind: string }) => void>(); guest = new Set<(e: any) => void>();
-  wander = true; overlaps = 0; says: { id: string; t: number }[] = []; t = 0; cmds: { t: number; id: string; c: string }[] = [];
+  wander = true; overlaps = 0; says: { id: string; t: number; text?: string; lang?: string }[] = []; t = 0; cmds: { t: number; id: string; c: string }[] = [];
   constructor(n: number, pers: (0 | 1 | 2 | 3)[]) {
     for (let i = 0; i < n; i++) this.miisL.push({ id: i === 0 ? 'host' : 'g' + i, name: 'M' + i, personality: pers[i % pers.length], x: -20 + (i % 4) * 13, z: -10 + Math.floor(i / 4) * 16, heading: 0, state: 'idle', isHost: i === 0, leaving: false, waiting: false });
   }
@@ -25,9 +27,9 @@ class FakeHost {
   face(id: string, x: number, z: number) { const m = this.m(id); if (m.state !== 'idle') return Promise.resolve(false); m.heading = Math.atan2(x - m.x, z - m.z); this.cmds.push({ t: this.t, id, c: 'face' }); return Promise.resolve(true); }
   interact(id: string, o: string) { const m = this.m(id); const ob = this.objects().find((x) => x.name === o)!; if (!this.goTo(id, ob.x, ob.z)) return false; m.busyT = 4; return true; }
   wave(id: string) { const m = this.m(id); if (m.state !== 'idle') return false; m.state = 'reacting'; m.busyT = 2; return true; }
-  say(id: string, text: string, ac: number) {
+  say(id: string, text: string, ac: number, lang?: string) {
     if (this.balloon) { this.overlaps++; return Promise.resolve('busy' as const); }
-    this.says.push({ id, t: this.t });
+    this.says.push({ id, t: this.t, text, lang });
     for (const l of this.speech) l({ speaker: id });
     return new Promise<'done' | 'interrupted'>((res) => { this.balloon = { id, left: text.length / 38 + ac, cb: res }; });
   }
@@ -215,5 +217,16 @@ const flush = () => new Promise((r) => setTimeout(r, 0));
   s.setPolicy(null); await h.run(300, 1 / 20);
   ok('policy removed: objects used again', s.stats.activities.inspect > 0, s.stats.activities);
   s.dispose();
+}
+// ---- R6: the Miis talk in the Reboot language; the voice is told which language each line is in
+{
+  const keyed = (lang: string) => Object.entries(STRINGS[lang]).filter(([k]) => k.startsWith('chat.')).map(([k, v]) => [k, new RegExp('^' + v.replace(/[.*+?^$()|[\]\\!]/g, '\\$&').replace('{name}', '.+') + '$')] as const);
+  const keyOf = (lang: string, text: string) => keyed(lang).find(([, r]) => r.test(text))?.[0];
+  const run = async (i18n: I18n | null) => { const h = new FakeHost(4, [3, 0, 1, 2]); const s = new SocialLife(h as any, 42); if (i18n) s.setLanguage(i18n); await h.run(300); await flush(); s.dispose(); return h.says; };
+  const en = await run(I18n.fixed('en')), def = await run(null);
+  ok('language en: every line from the English table, sent with lang "en"', en.length >= 4 && en.every((x) => x.lang === 'en' && keyOf('en', x.text!)), en.slice(0, 6));
+  ok('no language set: Italian lines as in R2b, no lang (the voice stays Italian)', def.length >= 4 && def.every((x) => x.lang === undefined && keyOf('it', x.text!)), def.slice(0, 6));
+  // lines last as long as their text, so later timing differs by language; the first line is the same pick
+  ok('same seed: the first line is the same pick in both languages (pools have the same keys)', en[0].id === def[0].id && keyOf('en', en[0].text!) === keyOf('it', def[0].text!), [en[0], def[0]]);
 }
 if (fails) { console.log(`${fails} FAILED`); process.exit(1); } else console.log('ALL PASS');

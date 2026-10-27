@@ -16,6 +16,7 @@
 import type { RebootHost, MiiView } from '../host';
 import { TRAITS, Traits, Personality, rng } from './traits';
 import { chatLine, LineKind } from './lines';
+import type { I18n } from '../i18n/i18n';
 
 type Plan =
   | { kind: 'wander'; x: number; z: number; started: boolean }
@@ -92,6 +93,9 @@ export class SocialLife {
   setPolicy(p: { canUseObject(id: string, object: string): boolean } | null) { this.policy = p; }
   setAttraction(p: { x: number; z: number } | null) { this.attraction = p; }
   setAffinity(f: ((a: string, b: string) => number) | null) { this.affinity = f; }
+  private i18n: I18n | undefined;
+  /** R6: the Miis talk in the language of the Reboot UI (default: Italian, as in R2b). */
+  setLanguage(i18n: I18n | null) { this.i18n = i18n ?? undefined; }
   subscribe(cb: (e: SocialEvent) => void) { this.subs.add(cb); return () => this.subs.delete(cb); }
   get listenerCount() { return this.subs.size; }
   private emit(e: SocialEvent) { for (const s of this.subs) { try { s(e); } catch (err) { console.warn(err); } } }
@@ -339,10 +343,10 @@ export class SocialLife {
       this.floor = c;
       const [kind, who] = c.seq[c.line];
       const other = who === c.a ? B! : A!, sp = this.agents.get(who)!;
-      const text = chatLine(kind, sp.p, other.name, this.rnd);
+      const text = chatLine(kind, sp.p, other.name, this.rnd, this.i18n);
       c.speaking = true; this.stats.lines++;
       this.note('say', [who, other.id], text);
-      void this.host.say(who, text, this.r(1.0, 1.6)).then((r) => {
+      void this.host.say(who, text, this.r(1.0, 1.6), this.i18n?.lang).then((r) => {
         c.speaking = false;
         if (!this.convos.includes(c)) return;
         // A balloon closed by the player's tap is an interruption, not a finished line (also on the last line).
