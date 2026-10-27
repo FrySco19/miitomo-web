@@ -246,6 +246,8 @@ await ev(() => window.__r5.setAuto(true));
 await page.waitForSelector('.gr-result');
 const res = await ev(() => { const s = window.__r5.rt.games.session; return { state: s.state, players: s.result?.players.length, stats: window.__r5.rt.games.stats.played }; });
 expect('D2 match finished with a ranking; stats updated', res.state === 'finished' && res.players >= 2 && res.stats === 1, res);
+const paid = await ev(() => window.__r5.rt.wallet.ledger.filter((e) => e.reason === 'earn.game.played').length);
+expect('R6.0b a finished match pays coins (game.played) once', paid === 1, paid);
 await shot('r5-ui-09-quiz-result');
 await page.click('.gr-result [data-a=back]');
 await page.waitForFunction(() => !document.querySelector('.mp-dock').hidden, null, { timeout: 2000 }).catch(() => {});
