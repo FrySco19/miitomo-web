@@ -55,6 +55,8 @@ export function presenceOf(f: P2PState['friends'][number], mp: MpView | null) {
   if (f.online || f.presence === 'online') return { cls: 'on', text: t.online };
   return { cls: 'off', text: f.lastSeen ? `${t.offline} · ${t.seen} ${ago(f.lastSeen)} ${uiLang() === 'it' ? t.ago : t.ago}` : t.offline };
 }
+/** How the link goes: host = direct (same network / public address), srflx / prflx = direct through NAT, relay = TURN. */
+export function routeText(r: string) { const it = uiLang() === 'it'; return r === 'relay' ? 'TURN' : r === 'host' ? (it ? 'diretto' : 'direct') : r === 'srflx' || r === 'prflx' ? (it ? 'diretto (internet)' : 'direct (internet)') : r; }
 /** The friend list with presence and the shared-room actions. */
 export function friendRows(s: P2PState, mp: MpView | null, cls = 'mp-friends') {
   const t = mpText();
@@ -64,7 +66,7 @@ export function friendRows(s: P2PState, mp: MpView | null, cls = 'mp-friends') {
   return `<ul class="${cls}">${s.friends.map((f) => {
     const p = presenceOf(f, mp), here = p.cls === 'here';
     const canInvite = f.online && !here && !iAmGuest, canEnter = f.online && !here && f.presence !== 'busy';
-    return `<li data-friend="${esc(f.id)}"><span class="mp-dot ${p.cls}" aria-hidden="true"></span><span class="mp-fname">${esc(f.name)}<small>${esc(p.text)}${f.route ? ` · ${esc(f.route === 'relay' ? 'TURN' : f.route === 'host' ? 'LAN' : f.route)}` : ''}</small></span>
+    return `<li data-friend="${esc(f.id)}"><span class="mp-dot ${p.cls}" aria-hidden="true"></span><span class="mp-fname">${esc(f.name)}<small>${esc(p.text)}${f.route ? ` · ${esc(routeText(f.route))}` : ''}</small></span>
       <span class="mp-acts">${pend('inv', f.id) ? `<span class="mp-tag">${esc(t.invited)}</span>` : canInvite ? `<button type="button" class="mp-btn" data-mp-invite="${esc(f.id)}">${esc(t.invite)}</button>` : ''}${pend('knock', f.id) ? `<span class="mp-tag">${esc(t.knocked)}</span>` : canEnter && f.presence !== 'in-room' || (canEnter && f.room?.host === f.id) ? `<button type="button" class="mp-btn ghost" data-mp-knock="${esc(f.id)}">${esc(t.enter)}</button>` : ''}</span></li>`;
   }).join('')}</ul>`;
 }

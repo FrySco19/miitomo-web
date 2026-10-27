@@ -383,7 +383,9 @@ export class P2PEngine {
       }
       case 'friend.code': {
         // the personal code: a player nearby → the LAN request; otherwise through the presence server
-        const code = String(a.code ?? '').toUpperCase().replace(/\s+/g, '').replace(/^MTW(?!-)/, 'MTW-');
+        // as people type or paste it: any case, spaces / dashes / dots anywhere, with or without "MTW"
+        const raw = String(a.code ?? '').toUpperCase().replace(/[^0-9A-Z]/g, ''), hex = raw.startsWith('MTW') ? raw.slice(3) : raw;
+        const code = /^[0-9A-F]{12}$/.test(hex) ? `MTW-${hex.slice(0, 4)}-${hex.slice(4, 8)}-${hex.slice(8)}` : '';
         if (!CODE_RE.test(code)) return { ok: false, code: 'FORMAT' };
         if (code === this.d.me.code) return { ok: false, code: 'SELF' };
         if (!(await this.d.profile())) return { ok: false, code: 'NO_MII' };

@@ -5,8 +5,17 @@
   "description": "Presence, friend requests by personal code and WebRTC signaling for Miitomo Web desktop (no game data, no Nintendo assets).",
   "type": "module",
   "main": "server.mjs",
-  "scripts": { "start": "node server.mjs" },
-  "dependencies": { "ws": "8.18.0" },
-  "engines": { "node": ">=20" },
-  "license": "MIT"
+  "scripts": {
+    "start": "node server.mjs"
+  },
+  "dependencies": {
+    "ws": "8.18.0"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "license": "MIT",
+  "devDependencies": {
+    "node-turn": "^0.0.6"
+  }
 }
