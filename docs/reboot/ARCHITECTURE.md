@@ -22,8 +22,26 @@ client/web/src/
     social/                    R2b: SocialLife (perception, conversations, priorities, activities), traits, lines
     rooms/                     R3: RoomInstance, templates, LocalRoomService (server stand-in), LocalVisitors, PublicRoomController
     hub/                       R4: SocialHub (model: location, destinations, navigation, events) + HubScreen (view)
+    i18n/                      R5: I18n (English + Italiano) + the text tables
+    places/                    R5: LocalPlacesService (other people's rooms), PlaceVisit (being a visitor), place views
+    games/                     R5: game model, GameRegistry, GameSession, MiiQuiz, GameRoomController + view
+    phone/                     R5: MiiPhone (model + app registry) + MiiPhoneView
+    miinstagram/               R5: model, LocalSocialService, PhotoStore, relations, FeedSimulator, MIInstagramApp
     ui/RebootPanel.ts, ui/reboot.css   Reboot layer above the Classic screens
 ```
+
+R5 follows the same rule as R3 and R4: **domain → events → controllers → UI**. Every new model is DOM-free and
+testable on the fake host; every view renders a model and sends intents back. One owner per piece of state:
+
+| State | Owner |
+|---|---|
+| Where the user is | `SocialHub.at`, derived from R3 (public), the place visit (friends' room / Sala Giochi) and the hub flag |
+| Who is in a room | the room's `RoomInstance` (R3) — own room in `LocalRoomService`, other rooms in `LocalPlacesService` |
+| Who is on screen | the R2 guest machinery, bound to presence by `SceneBinding` |
+| What a Mii is doing | R2b `SocialLife` (a match only *reserves* players from it) |
+| The phone | `MiiPhone` (it never touches the location) |
+| Posts, reactions, comments | `SocialFeedService` (local now, remote from R10) |
+| Language | `I18n` |
 
 Classic is not moved into a `classic/` folder. Moving it would rewrite every import and every test path for no gain.
 Instead the boundary is enforced by tests (`tests/unit/reboot.test.mts`, "boundary" checks):
@@ -37,8 +55,8 @@ Instead the boundary is enforced by tests (`tests/unit/reboot.test.mts`, "bounda
 
 - `?reboot=1` turns Reboot on in this browser and remembers it. `?reboot=0` turns it off. The Classic launcher
   (`avvia-miitomo-web.bat`) always passes `reboot=0`; `avvia-miitomo-reboot.bat` passes `reboot=1`.
-- With the gate closed, the Reboot chunk (≈ 13 KB JS + 3 KB CSS) is **never downloaded**, and Classic runs exactly
-  as before.
+- With the gate closed, the Reboot chunk (≈ 148 KB JS, 46 KB gzipped, + 24 KB CSS after R5) is **never downloaded**,
+  and Classic runs exactly as before.
 - Flags (`reboot/flags.ts`): `REBOOT_ENABLED` (the gate) plus one flag per feature. A feature flag is effective
   only when all three hold:
   - the gate is open;
@@ -64,6 +82,17 @@ When Reboot needs more from the shared code, the change has two parts:
    became a list of guests. `guestCap` is 1 in Classic and is raised only by Reboot.
 2. **A method on `RebootHost`.** It is reviewable in one place.
 
+R5 added, all with Classic behaviour unchanged (Classic never calls them; the defaults are the old behaviour):
+
+| Shared change | Where | Used by |
+|---|---|---|
+| A guest can be placed **inside** (no door, no greeting): `guestArrive(spec, { inside })` | `main.ts` | Miis already in a visited room |
+| `Play.visitPlace(id, skin, friendHost)`: another room look, the user's Mii comes in through the door, screen `place:<id>` | `play/Play.ts` (`startRoom` shares its setup through `wearOwnMii`) | friends' rooms, Sala Giochi |
+| Player object taps ask an optional policy first (`objectPolicy`, null in Classic) | `main.ts` `roomClick` | visitor permissions |
+| `snapshot(size)`: square JPEG of the room view | `main.ts` | Miifoto 2 "photo of the room" |
+| `Play.photoShare`: an extra button on the Miifoto screen (absent when null) | `play/Play.ts` | "Condividi su MIInstagram" |
+| `RebootHost.friends()` also returns personality type, room look, birthday, greeting | `main.ts` | places, quiz, MIInstagram |
+
 ## Persistence
 
 Reboot keeps its own keys and never writes the Classic save:
@@ -72,5 +101,11 @@ Reboot keeps its own keys and never writes the Classic save:
 - `mtw.reboot.flags`
 - `mtw.reboot.multimii`
 - `mtw.reboot.safety`
+- `mtw.reboot.lang` (R5)
+- `mtw.reboot.miinstagram` (R5, schema v1) + IndexedDB `mtw-reboot` / `photos` for the photos
+- `mtw.reboot.relations` (R5)
+- `mtw.reboot.games` (R5)
+
+Presence, open rooms, sessions and the phone state are live state and are never stored.
 
 Server-side state comes in R10 (see SERVER.md).

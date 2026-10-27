@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>R5 harness</title>
+  <link rel="stylesheet" href="r5-harness.css" />
+  <style>
+    html, body { margin: 0; height: 100%; overflow: hidden; background: #f3e7d8; font: 700 15px/1.4 ui-rounded, "Nunito", system-ui, sans-serif; }
+    /* stands in for the 3D room: a soft room picture so screenshots show the world behind the UI */
+    #stage { position: fixed; inset: 0; background: linear-gradient(#fbe9d4 0 58%, #e9c9a4 58% 100%); }
+    #stage::after { content: 'room (test double)'; position: absolute; left: 50%; top: 40%; translate: -50% 0; color: #c9a882; font-size: 13px; }
+  </style>
+</head>
+<body>
+  <section id="stage"></section>
+  <script type="module" src="r5-harness.js"></script>
+</body>
+</html>

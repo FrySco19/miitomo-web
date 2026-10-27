@@ -19,7 +19,7 @@ The repository holds two clearly separated experiences:
 | Goal | Rebuild Miitomo 2.4.0 as it was, from evidence | Add new social features on top of the Classic engine |
 | Content | Only what exists in the original files; missing server content stays marked as missing | New features, clearly labelled as not original |
 | Start | `avvia-miitomo-web.bat` or `?reboot=0` | `avvia-miitomo-reboot.bat` or `?reboot=1` |
-| Status | Playable core loop; see [ORIGINAL-PORT-STATUS](docs/ORIGINAL-PORT-STATUS.md) | Phases R1–R4 done, R5 next; see [ROADMAP](docs/reboot/ROADMAP.md) |
+| Status | Playable core loop; see [ORIGINAL-PORT-STATUS](docs/ORIGINAL-PORT-STATUS.md) | Phases R1–R5 done, R6 next; see [ROADMAP](docs/reboot/ROADMAP.md) |
 
 **▶ Web preview: [frysco19.github.io/miitomo-web](https://frysco19.github.io/miitomo-web/)**. It hosts the code only:
 on the first visit you import your own Miitomo files, which stay in your browser for the next visits. Add
@@ -71,11 +71,11 @@ server data that no longer exists; they are shown as missing, never invented.
 | R2b | Social life: Miis notice each other, hold conversations, choose activities by personality | done |
 | R3 | Public room: open your room to visitors, permissions, kick, polite closing | done |
 | R4 | Social hub "Piazza": move between your room and your public room | done |
-| R5 | MIInstagram and Miifoto 2 | next |
-| R6–R12 | Minigames, events, rewards, notifications, own backend, realtime multiplayer, polish | planned |
+| R5 | Friends' rooms, Sala Giochi with the Quiz dei Mii, MiiPhone with MIInstagram, Miifoto sharing, English + Italiano | done |
+| R6–R12 | Minigame engine, more games, events, rewards, notifications, own backend, realtime multiplayer, polish | planned |
 
-Reboot is local only today. Visitors in the public room are simulated by a local service that emits the same events
-the planned backend will send.
+Reboot is local only today. Visitors, friends' rooms, co-players and MIInstagram reactions come from the user's
+**local** friends, simulated by local services that emit the same events the planned backend will send.
 
 ## Architecture
 
@@ -137,7 +137,7 @@ Unit tests that need no game files; these run in CI on every push:
 
 ```bash
 cd client/web
-for t in bodyscale framing personality reboot social rooms hub; do npx tsx ../../tests/unit/$t.test.mts; done
+for t in bodyscale framing personality reboot social rooms hub i18n friendrooms gameroom miiphone miinstagram; do npx tsx ../../tests/unit/$t.test.mts; done
 ```
 
 End-to-end tests drive the real build in headless Chromium with Playwright. They need your own game files, so they
@@ -148,6 +148,9 @@ run locally only:
 (cd client/web && npm run build && npx vite preview --port 4173) &
 node tests/e2e/m18-guest.smoke.mjs http://localhost:4173/ out/m18 <your files…>
 ```
+
+`tests/e2e/r5-ui.smoke.mjs` needs no game files (Reboot R5 UI on a test double of the room engine):
+`(cd client/web && npm run build) && node tests/e2e/r5-ui.smoke.mjs out/r5-ui`.
 
 Each suite lists its arguments in its header comment.
 
@@ -187,7 +190,7 @@ Start with the [documentation index](docs/README.md). Key pages:
   classification.
 - Reboot is local only: no accounts, no online play, no real other players yet.
 - The room camera is adapted to landscape PC windows; on a phone-shaped window the framing differs from the original.
-- Only the Italian text set has been tested.
+- Classic has only been tested with the Italian text set. Reboot texts are in English and Italiano.
 
 ## Contributing
 

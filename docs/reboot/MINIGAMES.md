@@ -1,4 +1,7 @@
-# Reboot — minigames (R6 engine, R7 three games; planned)
+# Reboot — minigames (R6 engine, R7 three games; planned — base delivered in R5)
+
+R5 delivered the start of both: the game model (definition, registry, session, result, reward) and a first playable
+Quiz dei Mii, in the Sala Giochi. See GAME-ROOM.md. The plan below is what R6 and R7 add on top.
 
 ## Engine (R6)
 

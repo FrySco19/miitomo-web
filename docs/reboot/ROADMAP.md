@@ -21,9 +21,9 @@ Every phase also keeps all Classic suites green.
 | R2b | Social life: perception (who talks, glances, arrivals), Mii ↔ Mii conversations on one floor, 6-level priorities with pause/resume, personality-weighted autonomous activities | **done** (2026-10-26) |
 | R3 | Public Room vertical slice: PublicRoomTemplate, RoomInstance (presence, roles, permissions, capacity), LocalRoomService (server stand-in, realtime events), simulated visitors, owner panel | **done** (2026-10-26) |
 | R4 | Social hub "Piazza": model over R3 (location, destinations, navigation, errors, events) + view; Casa ↔ Hub ↔ my Public Room; future destinations declared | **done** (2026-10-26) |
-| R5 | MIInstagram (feed, posts from Miifoto, reactions, comments, profile) + Miifoto 2 workflow (CREATE → EDIT → SAVE → POST → SHARE) | planned |
-| R6 | MiniGameEngine (Definition / Session / Result / Reward, timer, score, leaderboard-ready) | planned |
-| R7 | Three minigames: Miitomo Drop 2.0, Quiz dei Mii, Fashion Challenge | planned |
+| R5 | Social expansion: friends' rooms, Sala Giochi (game model + Quiz dei Mii), MiiPhone + MIInstagram (typed posts, reactions, comments, autonomous Miis), Miifoto 2 sharing, English + Italiano | **done** (2026-10-27) |
+| R6 | MiniGameEngine: grow the R5 game model (leaderboard, server-validated scores, more lifecycle tools) | planned (base delivered in R5) |
+| R7 | Three minigames: Miitomo Drop 2.0, Quiz dei Mii (first version delivered in R5), Fashion Challenge | planned |
 | R8 | Events (data-driven) + rewards (RewardDefinition / Grant / Inventory, no currency yet) | planned |
 | R9 | Notifications | planned |
 | R10 | Our central backend (API + DB + realtime), ServerRebootProvider live | planned |
@@ -98,6 +98,29 @@ All of it is in `docs/reboot/SOCIAL-HUB.md`; the code is in `reboot/hub/`.
 - Future destinations are shown disabled. Adding a destination is a one-call extension point.
 
 Tests: `tests/unit/hub.test.mts` and `tests/e2e/r4-hub.smoke.mjs` (scenarios A–H plus the soak).
+
+## R5 — what was delivered
+
+One small social world instead of three menus: **Casa → Piazza → friends' rooms · Sala Giochi · my public room**, and
+above it, not a place, the **MiiPhone → MIInstagram**.
+
+- **Friends' rooms** (FRIEND-ROOMS.md): the visited side of R3 — same `RoomInstance`, events and `SceneBinding`
+  (extracted from R3 with the same behaviour). Visitor role, owner permissions, refusals with nothing changed,
+  switching rooms, eviction when the owner closes, complete cleanup. Local friends only, deterministic fixture.
+- **Sala Giochi** (GAME-ROOM.md): a real place with a game model (registry, definition, session, result, reward) and
+  one real game, Quiz dei Mii, built only from the user's own facts. Players reserved from R2b, spectators watch,
+  reactions with the existing commands.
+- **MiiPhone** (MIIPHONE.md): a phone on the right edge; never changes location; app registry; responsive.
+- **MIInstagram** (MIINSTAGRAM.md): typed posts (photo / activity / answer), Miitomo-like reactions (one per person),
+  comments, Miifoto sharing and photos of the room, persistence with schema and migration, a service seam for R10,
+  autonomous Miis driven by personality and relations, with cool-downs, caps and dedup.
+- **English + Italiano** (I18N.md): one table, browser detection, English fallback, manual choice persisted.
+- **R2b additions** (SOCIAL.md): conversation events, reserve / release, a point of interest, affinity.
+- **Fixes**: `RebootHost` callbacks bound (a method passed unbound would lose `this`); the R2b "tap on the last line"
+  bug, already fixed, re-checked over 14 seeds.
+
+Tests: `tests/unit/{i18n,friendrooms,gameroom,miiphone,miinstagram}.test.mts`, `tests/e2e/r5-ui.smoke.mjs` (runs
+without game files) and `tests/e2e/r5-social.smoke.mjs` (real engine, needs the user's files).
 
 ## Definition of done of the first big Reboot milestone
 

@@ -33,7 +33,8 @@ Every feature belongs to exactly one of these classes:
 | Room engine, RoomDirector, door, furniture, idle actions | SHARED INFRASTRUCTURE | |
 | Room camera (fixed, PC framing) | CLASSIC (camera) + WEB ADAPTATION (framing) | |
 | Audio, BGM, voice, effects | SHARED INFRASTRUCTURE | |
-| Miifoto (original) | CLASSIC | Miifoto 2 (R5) = REBOOT |
+| Miifoto (original) | CLASSIC | Unchanged. Reboot adds a "Condividi su MIInstagram" button to it (absent in Classic) |
+| Miifoto 2 (R5): share a Miifoto on MIInstagram, photo of the room with several Miis | REBOOT | Built on the Classic Miifoto; no second photo system |
 | Shop catalogue (no purchases) | CLASSIC | |
 | Local friends, visiting a friend's room | CLASSIC (flow) / SHARED (provider) | |
 | One friend visiting your room (M18) | CLASSIC (APPROXIMATED schedule) | Capacity 1 |
@@ -46,7 +47,12 @@ Every feature belongs to exactly one of these classes:
 | Report / block / mute / privacy / rate limits | REBOOT (local now, SERVER REQUIRED to enforce) | |
 | Public Room (R3): RoomInstance, templates, LocalRoomService, simulated visitors, owner panel | REBOOT; SERVER REQUIRED for real other users | `reboot/rooms/`. Visitors are local friends simulated until R10 |
 | Social hub "Piazza" (R4): SocialHub model + HubScreen view, navigation Casa / Hub / Public Room, future destinations disabled | REBOOT | `reboot/hub/`. Local only, no networking. It reuses R3 events and R3 cleanup |
-| MIInstagram feed, posts, reactions, comments (R5) | REBOOT, SERVER REQUIRED for other users | |
+| Friends' rooms (R5): visit a friend's public room as a visitor | REBOOT; SERVER REQUIRED for rooms of real other users | `reboot/places/`. Local friends only, deterministic fixture. The visited side of R3 |
+| Sala Giochi (R5) + game model + Quiz dei Mii | REBOOT | `reboot/games/`. Questions only from the user's own data; other players simulated locally |
+| MiiPhone (R5) | REBOOT | `reboot/phone/`. Never changes location |
+| MIInstagram feed, typed posts, reactions, comments, autonomous Miis (R5) | REBOOT, SERVER REQUIRED for other users | `reboot/miinstagram/`. Reactions, comment lines and moments are NEW text |
+| English + Italiano for Reboot (R5) | REBOOT | `reboot/i18n/`. Classic keeps the original texts of the user's files |
+| Guest placed inside without the door, `visitPlace`, object policy, room snapshot, Miifoto share hook (R5) | SHARED INFRASTRUCTURE | Off in Classic (never called / null) |
 | Minigames, MiniGameEngine (R6–R7) | REBOOT | Miitomo Drop 2.0 = new; original Miitomo Drop stays CLASSIC (prizes SERVER DATA MISSING) |
 | Events, rewards (R8) | REBOOT | No currency |
 | Notifications (R9) | REBOOT, SERVER REQUIRED for remote ones | |

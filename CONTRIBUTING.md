@@ -42,7 +42,7 @@ Unit tests that need no game files (these run in CI):
 
 ```bash
 cd client/web
-for t in bodyscale framing personality reboot social rooms hub; do npx tsx ../../tests/unit/$t.test.mts; done
+for t in bodyscale framing personality reboot social rooms hub i18n friendrooms gameroom miiphone miinstagram; do npx tsx ../../tests/unit/$t.test.mts; done
 ```
 
 End-to-end tests drive the real build in headless Chromium with Playwright. They need your own game files, passed
@@ -52,6 +52,14 @@ on the command line, so they do not run in CI:
 (cd tests && npm install --no-save playwright && npx playwright install chromium)
 (cd client/web && npm run build && npx vite preview --port 4173) &
 node tests/e2e/r4-hub.smoke.mjs http://localhost:4173/ out/r4 <your files…>
+```
+
+One end-to-end suite needs **no** game files: `tests/e2e/r5-ui.smoke.mjs` drives the real Reboot R5 runtime (Piazza,
+friends' rooms, Sala Giochi, MiiPhone, MIInstagram, languages) on a test double of the room engine, and checks on the
+real build that Classic never loads Reboot:
+
+```bash
+(cd client/web && npm run build) && node tests/e2e/r5-ui.smoke.mjs out/r5-ui
 ```
 
 Every pull request must keep all Classic suites green. Do not change a test to make it pass; fix the cause, or

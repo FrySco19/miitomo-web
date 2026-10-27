@@ -27,7 +27,7 @@ jobs:
         run: npm run build
       - name: Unit tests (no game files needed)
         run: |
-          for t in bodyscale framing personality reboot social rooms hub; do
+          for t in bodyscale framing personality reboot social rooms hub i18n friendrooms gameroom miiphone miinstagram; do
             echo "::group::$t"
             npx --yes tsx@4.19.2 ../../tests/unit/$t.test.mts
             echo "::endgroup::"

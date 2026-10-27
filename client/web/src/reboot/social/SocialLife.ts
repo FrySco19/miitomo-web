@@ -47,6 +47,8 @@ export interface SocialStats {
   initiatedBy: Record<Personality, number>;
 }
 export interface SocialLogEntry { t: number; type: string; ids: string[]; info?: string }
+/** R5: conversation lifecycle, for layers that build on it (relations, MIInstagram activity). Read-only facts. */
+export type SocialEvent = { type: 'convo.start' | 'convo.end'; a: string; b: string; why?: 'done' | 'interrupted' | 'gone' | 'stuck' | 'noFloor'; lines: number };
 
 const STEP = 0.25;
 const CHAT_DIST = 9.5;          // close enough to talk (personal distance 4.5 + a bit)
@@ -71,6 +73,13 @@ export class SocialLife {
   private unsub: (() => void)[] = [];
   /** Optional room rules (e.g. a public room's permissions): which objects a Mii may use. null = everything. */
   private policy: { canUseObject(id: string, object: string): boolean } | null = null;
+  /** R5: Miis owned by another activity (a minigame session): no conversations, no activities while reserved. */
+  private reserved = new Map<string, string>();
+  /** R5: a point of interest (e.g. a game in progress) idle Miis may walk up to and watch. */
+  private attraction: { x: number; z: number } | null = null;
+  /** R5: how close two Miis are (0..1, relations); friends are picked as partners more often. */
+  private affinity: ((a: string, b: string) => number) | null = null;
+  private subs = new Set<(e: SocialEvent) => void>();
 
   constructor(private host: RebootHost, seed = (Date.now() ^ 0x5eed) >>> 0) {
     this.rnd = rng(seed);
@@ -81,9 +90,39 @@ export class SocialLife {
     this.unsub.push(host.onGuest((e) => { if (e.type === 'arrive') this.onArrive(e.id); else this.drop(e.id); }));
   }
   setPolicy(p: { canUseObject(id: string, object: string): boolean } | null) { this.policy = p; }
+  setAttraction(p: { x: number; z: number } | null) { this.attraction = p; }
+  setAffinity(f: ((a: string, b: string) => number) | null) { this.affinity = f; }
+  subscribe(cb: (e: SocialEvent) => void) { this.subs.add(cb); return () => this.subs.delete(cb); }
+  get listenerCount() { return this.subs.size; }
+  private emit(e: SocialEvent) { for (const s of this.subs) { try { s(e); } catch (err) { console.warn(err); } } }
+  /**
+   * R5: another activity takes these Miis (priority between the player and the door). Their conversation ends politely
+   * (the other partner is freed), their activity is suspended and resumed on release. One owner at a time per Mii.
+   */
+  reserve(ids: string[], owner: string): string[] {
+    const got: string[] = [];
+    for (const id of ids) {
+      if (this.reserved.has(id) && this.reserved.get(id) !== owner) continue;
+      this.reserved.set(id, owner); got.push(id);
+      const a = this.agents.get(id); if (!a) continue;
+      if (a.convo) this.end(a.convo, 'interrupted');
+      if (a.plan && a.plan.kind !== 'rest' && a.plan.started) { a.suspended = a.plan; this.note('suspend', [id], `${a.plan.kind} (reserved)`); }
+      a.plan = null;
+    }
+    if (got.length) this.note('reserve', got, owner);
+    return got;
+  }
+  /** Gives the Miis of `owner` back to social life (`only` = just these ones, e.g. a player who left the match). */
+  release(owner: string, only?: string[]) {
+    const ids = [...this.reserved].filter(([id, o]) => o === owner && (!only || only.includes(id))).map(([id]) => id);
+    for (const id of ids) { this.reserved.delete(id); const a = this.agents.get(id); if (a) a.next = this.now + this.r(0.5, 2); }
+    if (ids.length) this.note('release', ids, owner);
+    return ids;
+  }
+  isReserved(id: string) { return this.reserved.has(id); }
   /** Forget Miis that are no longer in the room right now (e.g. after the owner left a public room). */
   resync() { this.views = new Map(this.host.miis().map((v) => [v.id, v])); for (const id of [...this.agents.keys()]) if (!this.views.has(id)) this.drop(id); }
-  dispose() { for (const u of this.unsub) u(); this.unsub = []; this.host.setGuestWander(true); }
+  dispose() { for (const u of this.unsub) u(); this.unsub = []; this.subs.clear(); this.reserved.clear(); this.host.setGuestWander(true); }
 
   /** Debug / tests: what every Mii is doing right now. */
   snapshot() {
@@ -135,6 +174,7 @@ export class SocialLife {
     a.next = this.now + this.r(a.t.pause[0], a.t.pause[1]);
     if (!this.free(v)) { a.next = this.now + 1.5; return; }                        // 2 door / leaving
     if (this.now < a.playerUntil) { a.next = a.playerUntil + this.r(0.5, 2); return; }   // 1 player
+    if (this.reserved.has(a.id)) { a.next = this.now + 1; return; }                // owned by another activity (R5)
     if (a.convo) return;                                                            // 3 conversation drives it
     if (a.plan && a.plan.kind !== 'rest') {
       if (v!.state !== 'idle') { a.next = this.now + 1; return; }                  // activity still running
@@ -152,10 +192,12 @@ export class SocialLife {
     const isHost = v.isHost, t = a.t;
     const partner = this.pickPartner(a, v);
     const talking = this.convos.find((c) => c.phase === 'talk' && c.a !== a.id && c.b !== a.id);
+    const att = this.attraction && !isHost && this.dist(v, this.attraction) > 10 ? this.attraction : null;
     const objs = isHost ? [] : this.freeObjects(a.id);
     const w = {
       chat: partner ? t.chat * (isHost ? 0.5 : 1) : 0,
       watch: !isHost && talking ? t.approach * 0.5 : 0,
+      attend: att ? 0.4 + t.react : 0,
       wander: isHost ? 0 : t.wander,
       inspect: objs.length ? t.inspect : 0,
       rest: t.rest,
@@ -169,6 +211,10 @@ export class SocialLife {
       const mx = (A.x + B.x) / 2, mz = (A.z + B.z) / 2, d = Math.max(1, this.dist(v, { x: mx, z: mz }));
       const s = Math.min(1, 8.5 / d);    // stop ~8.5 from the middle of the pair, on our side
       this.startPlan(a, { kind: 'watch', convo: talking.id, x: mx + (v.x - mx) * s, z: mz + (v.z - mz) * s, started: false }); return;
+    }
+    if (pick === 'attend' && att) {          // something is going on (a game): go and watch it from a few steps away
+      const d = Math.max(1, this.dist(v, att)), s = Math.min(1, this.r(9, 13) / d);
+      this.startPlan(a, { kind: 'watch', convo: -1, x: att.x + (v.x - att.x) * s, z: att.z + (v.z - att.z) * s, started: false }); return;
     }
     if (pick === 'inspect' && objs.length) { this.startPlan(a, { kind: 'inspect', object: objs[Math.floor(this.rnd() * objs.length)], started: false }); return; }
     if (pick === 'wander') { const s = this.spot(a, v); this.startPlan(a, { kind: 'wander', x: s.x, z: s.z, started: false }); return; }
@@ -202,6 +248,7 @@ export class SocialLife {
   }
   private finishPlan(a: Agent) {
     const p = a.plan; a.plan = null;
+    if (p?.kind === 'watch' && p.convo === -1 && this.attraction) { void this.host.face(a.id, this.attraction.x, this.attraction.z); this.stats.looks++; this.note('look', [a.id], 'attraction'); return; }
     if (p?.kind === 'watch') {          // arrived next to a conversation: look at it (a social glance, priority 4)
       const c = this.convos.find((x) => x.id === p.convo);
       const A = c && this.views.get(c.a), B = c && this.views.get(c.b);
@@ -216,14 +263,14 @@ export class SocialLife {
     if (this.convos.length >= maxConvos) return null;
     let best: Agent | null = null, bestS = 0;
     for (const b of this.agents.values()) {
-      if (b === a || b.convo || this.now < b.playerUntil || this.now < b.chatAfter) continue;
+      if (b === a || b.convo || this.now < b.playerUntil || this.now < b.chatAfter || this.reserved.has(b.id)) continue;
       const bv = this.views.get(b.id);
       if (!this.free(bv)) continue;
       if (bv!.state !== 'idle' && !(bv!.state === 'walking' && b.plan && b.plan.kind !== 'rest')) continue;   // may interrupt a walk (5)
       if (bv!.isHost && v.isHost) continue;
       const d = this.dist(v, bv!);
       // nearby partners are preferred; outgoing Miis also go and find someone further away
-      const s = (1 / (1 + d / 10)) * (0.4 + a.t.approach) * (0.6 + b.t.chat) * (0.75 + 0.5 * this.rnd());
+      const s = (1 / (1 + d / 10)) * (0.4 + a.t.approach) * (0.6 + b.t.chat) * (0.75 + 0.5 * this.rnd()) * (this.affinity ? 0.6 + this.affinity(a.id, b.id) : 1);
       if (s > bestS) { bestS = s; best = b; }
     }
     return best;
@@ -242,6 +289,7 @@ export class SocialLife {
     a.convo = c; b.convo = c; this.convos.push(c);
     this.stats.started++; this.stats.initiatedBy[a.p]++;
     this.note('convo', [a.id, b.id], `start #${c.id} turns ${turns}`);
+    this.emit({ type: 'convo.start', a: a.id, b: b.id, lines: 0 });
     this.approach(c);
   }
   private approach(c: Convo) {
@@ -317,6 +365,7 @@ export class SocialLife {
     if (this.floor === c) this.floor = null;
     if (why === 'done') this.stats.done++; else if (why === 'interrupted' || why === 'gone') this.stats.interrupted++; else this.stats.aborted++;
     this.note('end', [c.a, c.b], `#${c.id} ${why}`);
+    this.emit({ type: 'convo.end', a: c.a, b: c.b, why, lines: c.line });
     for (const id of [c.a, c.b]) {
       const x = this.agents.get(id); if (!x) continue;
       x.convo = null;
@@ -338,7 +387,7 @@ export class SocialLife {
     const partner = this.agents.get(speaker)?.convo; const pid = partner ? (partner.a === speaker ? partner.b : partner.a) : null;
     const cands = [...this.agents.values()].filter((x) => {
       const v = this.views.get(x.id);
-      return x.id !== speaker && x.id !== pid && !x.convo && v?.state === 'idle' && !v.leaving && this.now >= x.lookAfter && this.now >= x.playerUntil && this.dist(v, sv) < LOOK_RANGE;
+      return x.id !== speaker && x.id !== pid && !x.convo && !this.reserved.has(x.id) && v?.state === 'idle' && !v.leaving && this.now >= x.lookAfter && this.now >= x.playerUntil && this.dist(v, sv) < LOOK_RANGE;
     });
     // never everybody: at most half of them (max 3), each with its own personality chance and its own delay
     const max = Math.min(3, Math.ceil(cands.length / 2));
@@ -358,7 +407,7 @@ export class SocialLife {
     const door = { x: 0, z: -27 };
     let n = 0;
     for (const x of [...this.agents.values()].sort(() => this.rnd() - 0.5)) {
-      if (x.id === id || x.convo || n >= 2 || this.rnd() > x.t.react) continue;
+      if (x.id === id || x.convo || this.reserved.has(x.id) || n >= 2 || this.rnd() > x.t.react) continue;
       n++;
       this.after(this.r(1, 3), () => {
         const v = this.views.get(x.id);
