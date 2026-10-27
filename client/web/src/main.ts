@@ -14,6 +14,9 @@ import { parseSceneXml } from './agx/xml';
 import { buildRoom, roomAvailable, roomSkins, furnitureBoxes, furnitureGroup, rayMesh, RoomBuild, parseRoomXml, RoomCamera } from './room/Room';
 import { framedRoomCamera } from './room/RoomFraming';
 import { rebootRequested } from './reboot/gate';   // the only static Reboot import (no dependencies)
+import { P2PClient } from './p2p/client';
+import { withP2P } from './p2p/social';
+import type { DesktopApi as LauncherDesktop } from './launcher/Launcher';
 import type { RebootHost } from './reboot/host';
 import { RoomDirector, DirectorEvent, Interactable, MiiState } from './room/RoomDirector';
 import { RoomSound } from './room/RoomSound';
@@ -1499,10 +1502,36 @@ const playApi: PlayApi = {
 };
 const play: Play | null = LAB ? null : new Play(playApi, OUTFIT_1);
 
+// ---------------- DESKTOP APP (desktop/): launcher + peer-to-peer friends. NEW, not original; off in a plain browser ----
+/** The Reboot side of the P2P link (RebootHost.p2p): ids, online friends, data per feature, "came online". */
+function p2pBridge(c: P2PClient) {
+  return {
+    me: () => c.state?.me.id ?? null,
+    online: () => (c.state?.friends ?? []).filter((f) => f.online).map((f) => f.id),
+    send: (ch: string, data: unknown, to?: string) => { void c.send(ch, data, to); },
+    on: (ch: string, cb: (from: string, data: unknown) => void) => c.on(ch, cb),
+    onOnline: (cb: (id: string) => void) => { let was = new Set((c.state?.friends ?? []).filter((f) => f.online).map((f) => f.id)); const un = c.onState((s) => { const now = new Set(s.friends.filter((f) => f.online).map((f) => f.id)); for (const id of now) if (!was.has(id)) cb(id); was = now; }); return () => { un(); }; },
+  };
+}
+const LAUNCHER = !LAB && new URLSearchParams(location.search).get('launcher') === '1';
+const DESKTOP = (window as unknown as { mtwDesktop?: { isDesktop: true } & LauncherDesktop }).mtwDesktop ?? null;
+/** The account's P2P engine (hidden page of the desktop app); its friends join the game's friends. */
+const p2p = DESKTOP && play ? new P2PClient() : null;
+if (p2p && play) play.social = withP2P(play.social, p2p);
+if (LAUNCHER && play) {
+  if (DESKTOP) gestured = true;   // the desktop app allows sound without a first click
+  void import('./launcher/Launcher').then((m) => m.mountLauncher({
+    screen: () => play.currentScreen, logo: () => play.logo, desktop: DESKTOP,
+    // the original title music when the user's files have it, else the room music (never bundled with the app)
+    music: () => { sound?.unlock(); if (sound?.canPlay('bgm_titleSceneInit')) setMusic('bgm_titleSceneInit'); },
+    friends: p2p ? (el) => { let un: (() => void) | null = null, gone = false; void import('./p2p/FriendsPanel').then((f) => { if (!gone) un = f.friendsPanel(p2p)(el); }); return () => { gone = true; un?.(); }; } : null,
+  }));
+}
+
 // ---------------- MIITOMO REBOOT (new features, not original Nintendo) ----------------
 // Loaded only when the gate is open (?reboot=1); Classic never depends on it (docs/reboot/ARCHITECTURE.md).
 let reboot: { dispose(): void } | null = null;
-const REBOOT_ON = !LAB && !!play && rebootRequested();
+const REBOOT_ON = !LAB && !LAUNCHER && !!play && rebootRequested();
 if (REBOOT_ON && play) {
   const host: RebootHost = {
     root: canvas.parentElement!,
@@ -1541,6 +1570,7 @@ if (REBOOT_ON && play) {
     // R6: settings applied to the shared infrastructure (Classic never calls them: original mix, full quality)
     setVolumes: (v) => { soundLevels = { music: v.music, effects: v.effects }; sound?.setLevels(v.music, v.effects); setWebTtsPrefs({ level: v.voice }); },
     setRenderQuality: (q) => { pixelCap = q === 'low' ? 1 : q === 'balanced' ? 1.5 : 2; renderer.setPixelRatio(Math.min(window.devicePixelRatio, pixelCap)); resize(); },
+    p2p: () => (p2p ? p2pBridge(p2p) : null),
     setPlayerName: (name) => { const n = name.trim().slice(0, 10); if (!n) return false; play.save.profile.name = n; playApi.setNickname(n); void play.persist(); return true; },
   };
   import('./reboot/index').then((m) => { reboot = m.bootReboot(host); }).catch((e) => console.warn('Reboot non caricato (Classic continua):', e));
@@ -1553,7 +1583,7 @@ function shopProbe() {
   const meshes = meshBoxes(b.model).map(({ name, box: bb }) => { const c = bb.getCenter(new THREE.Vector3()), z = bb.getSize(new THREE.Vector3()); return { name, c: c.toArray().map((v) => +v.toFixed(1)), s: z.toArray().map((v) => +v.toFixed(1)) }; });
   return { box: [b.box.min.toArray(), b.box.max.toArray()], n: meshes.length, big: meshes.sort((x, y) => y.s[0] * y.s[1] * y.s[2] - x.s[0] * x.s[1] * x.s[2]).slice(0, 25), lights: !!b.lights, build: b };
 }
-(window as any).__mtw = { listenerCounts: () => ({ tick: tickListeners.size, speech: speechListeners.size, player: playerListeners.size, guest: guestListeners.size, pendingSays: pendingSays.length }), get reboot() { return reboot; }, REBOOT_ON, get framing() { return framing ? { dolly: framing.dolly, shiftNdc: framing.shiftNdc, position: framing.position.toArray(), target: framing.target.toArray() } : null; }, gestureInfo, get guest() { return guests[0] ?? null; }, get guests() { return guests; }, get talker() { return talker; }, guestLog, guestArrive, guestLeave, get doorOwner() { return doorOwner === director ? 'host' : doorOwner ? 'guest' : null; }, get soundSw() { return soundSw; }, ruleInfo, PERSONALITIES, touchMenu, ccam, closetCamZoom, closetCamPan, socialLib: { sanitizeFriend }, get venue() { return venue; }, shopProbe, effects, playEffect, vfs, voiceLog, get voice() { return voice; }, play, playApi, LAB, speakLog, get personality() { return personality; }, get emoFace() { return emoFace; }, floorAt, camera, simRoom, roomPick, testClock, get sound() { return sound; }, roomUi, get interactables() { return interactables; }, clock, stagePoint, get room() { return room; }, get director() { return director; }, roomClick, projectRoom, engine, ui, view, slots, outfit, OUTFIT_1, get lastRes() { return lastRes; }, get lastScale() { return lastScale; }, catalog, applyPose, rebuild, randomMii, onFiles, renderer, orig, get status() { return status; }, get miiData() { return miiData; }, set miiData(v: Uint8Array | null) { miiData = v; } };
+(window as any).__mtw = { get p2p() { return p2p; }, LAUNCHER, listenerCounts: () => ({ tick: tickListeners.size, speech: speechListeners.size, player: playerListeners.size, guest: guestListeners.size, pendingSays: pendingSays.length }), get reboot() { return reboot; }, REBOOT_ON, get framing() { return framing ? { dolly: framing.dolly, shiftNdc: framing.shiftNdc, position: framing.position.toArray(), target: framing.target.toArray() } : null; }, gestureInfo, get guest() { return guests[0] ?? null; }, get guests() { return guests; }, get talker() { return talker; }, guestLog, guestArrive, guestLeave, get doorOwner() { return doorOwner === director ? 'host' : doorOwner ? 'guest' : null; }, get soundSw() { return soundSw; }, ruleInfo, PERSONALITIES, touchMenu, ccam, closetCamZoom, closetCamPan, socialLib: { sanitizeFriend }, get venue() { return venue; }, shopProbe, effects, playEffect, vfs, voiceLog, get voice() { return voice; }, play, playApi, LAB, speakLog, get personality() { return personality; }, get emoFace() { return emoFace; }, floorAt, camera, simRoom, roomPick, testClock, get sound() { return sound; }, roomUi, get interactables() { return interactables; }, clock, stagePoint, get room() { return room; }, get director() { return director; }, roomClick, projectRoom, engine, ui, view, slots, outfit, OUTFIT_1, get lastRes() { return lastRes; }, get lastScale() { return lastScale; }, catalog, applyPose, rebuild, randomMii, onFiles, renderer, orig, get status() { return status; }, get miiData() { return miiData; }, set miiData(v: Uint8Array | null) { miiData = v; } };
 
 // Boot: restore cached files if present.
 (async () => {

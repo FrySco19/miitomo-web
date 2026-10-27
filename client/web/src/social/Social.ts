@@ -1,9 +1,11 @@
 /**
  * Friends (M16). User decision 2026-10-26: FRIENDS = LOCAL NOW → OUR CENTRAL SERVER LATER.
+ * User decision 2026-10-27: the desktop app adds REAL friends PEER-TO-PEER (no server; p2p/social.ts wraps this
+ * provider, docs/desktop/DESKTOP.md). The browser build is unchanged.
  *
  * The gameplay layer talks only to `SocialProvider`; it never knows whether the friends come from this device
- * (LocalProvider) or from our own future backend (ServerProvider). Nintendo servers / Nintendo authentication are never
- * used, and P2P is not the target architecture (the original was a central REST service, see API.md).
+ * (LocalProvider), from peer-to-peer (desktop app) or from our own future backend (ServerProvider). Nintendo servers /
+ * Nintendo authentication are never used (the original was a central REST service, see API.md).
  *
  *  ORIGINAL   friend-room texts / dialogs / telops / greetings, the friend-room BGM lines, room tabs (texts + layouts)
  *  REVERSED   the original flow: GoToFriendRoom, SequenceWatchFriend, SequenceByeFriendInFriendRoom /
@@ -24,7 +26,8 @@ import { openMtwDb, reqP, txDone } from '../assets/db';
 export interface FriendProfile {
   id: string;
   created: string;
-  source: 'local' | 'server';
+  /** p2p (desktop app): a real friend connected peer-to-peer; their profile comes from them. */
+  source: 'local' | 'server' | 'p2p';
   profile: SaveData['profile'];
   outfit: Outfit;
   room: SaveData['room'];
@@ -34,7 +37,7 @@ export interface FriendProfile {
 }
 
 export interface SocialProvider {
-  readonly kind: 'local' | 'server';
+  readonly kind: 'local' | 'server' | 'p2p';
   /** null = usable; otherwise why not (shown to the user). */
   readonly unavailable: string | null;
   list(): Promise<FriendProfile[]>;
@@ -75,7 +78,7 @@ export function sanitizeFriend(raw: unknown): FriendProfile | null {
   }
   const room = (r.room ?? {}) as Partial<SaveData['room']>;
   return {
-    id: r.id, created: str(r.created, 40) || new Date(0).toISOString(), source: r.source === 'server' ? 'server' : 'local',
+    id: r.id, created: str(r.created, 40) || new Date(0).toISOString(), source: r.source === 'server' ? 'server' : r.source === 'p2p' ? 'p2p' : 'local',
     profile: {
       miiData: p.miiData, name: str(p.name, 10).trim() || 'Mii', birthday: bd,
       height: p.height == null ? null : clampInt(p.height, 0, 127, 64), build: p.build == null ? null : clampInt(p.build, 0, 127, 64),
