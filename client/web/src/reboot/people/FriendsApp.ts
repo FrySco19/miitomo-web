@@ -21,6 +21,8 @@ export interface FriendsDeps {
   closeness: (a: string, b: string) => number;
   /** null = places switched off: no "where" and no visits. */
   places: { whereIs: (id: string) => Where; refusalOf: (placeId: string) => PlaceError | null; current: () => string | null; subscribe: (cb: () => void) => () => void } | null;
+  /** Desktop app: real friends connected peer-to-peer right now (null = not the desktop app). */
+  online?: (() => string[]) | null;
   /** Goes to a place (the phone closes on success); the message is already translated. */
   go: (placeId: string) => Promise<{ ok: boolean; message?: string }>;
 }
@@ -39,7 +41,7 @@ export function friendsApp(d: FriendsDeps) {
       const btn = !w || !w.placeId || here ? '' : `<button type="button" class="r-btn ${can ? 'primary' : ''} sm" data-go="${esc(w.placeId)}" ${can ? '' : 'disabled'} ${refusal ? `title="${esc(t('place.err.' + refusal))}"` : ''}>${esc(busy === w.placeId ? t('friends.going') : t(w.at === 'home' ? 'friends.visit' : 'friends.join'))}</button>`;
       return `<li class="r-row fa-row" data-id="${esc(f.id)}">
           <span class="r-avatar p${f.personality ?? 2}" aria-hidden="true">${esc((f.name.trim()[0] ?? '?').toUpperCase())}</span>
-          <span class="r-grow"><b>${esc(f.name)}</b>
+          <span class="r-grow"><b>${esc(f.name)}${f.id.startsWith('p2p-') ? ` <span class="r-chip ${d.online?.().includes(f.id) ? 'ok' : ''}">${esc(t(d.online?.().includes(f.id) ? 'friends.online' : 'friends.real'))}</span>` : ''}</b>
             <small>${w ? esc(where(w)) : esc(t('personality.' + (f.personality ?? 2)))}${refusal ? ` · <span class="fa-why">${esc(t('place.err.' + refusal))}</span>` : ''}</small>
             <span class="fa-lv"><span class="r-chip lv${l.level}">${esc(t('rel.' + l.level))}</span><span class="fa-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.round(l.progress * 100)}" aria-label="${esc(l.next ? t('rel.next', { pct: Math.round(l.progress * 100), level: t('rel.' + l.next) }) : t('rel.max'))}"><i style="width:${Math.round(l.progress * 100)}%"></i></span></span>
           </span>${btn}</li>`;

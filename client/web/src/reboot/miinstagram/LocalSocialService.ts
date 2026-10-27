@@ -158,6 +158,29 @@ export class LocalSocialService implements SocialFeedService {
     this.emit({ type: 'post.deleted', id });
     return ok(true as const);
   }
+  /**
+   * R6 P2P: a real friend's post as they sent it (P2PFeedSync has already set its id and author). Inserted, or
+   * replaced when it is already here (their reactions and comments changed); the photo is kept once.
+   */
+  async upsertRemote(raw: unknown, photo: string | null) {
+    const p = sanitizePost(raw); if (!p) return no('INVALID_POST');
+    const i = this.posts.findIndex((x) => x.id === p.id);
+    if (p.kind === 'photo') {
+      const old = i >= 0 ? this.posts[i] : null;
+      if (old && old.kind === 'photo') p.photoId = old.photoId;
+      else { if (!validPhoto(photo)) return no('IMAGE_UNAVAILABLE'); try { p.photoId = await this.photos.put(photo); } catch { return no('PERSISTENCE'); } }
+    }
+    if (i >= 0) { this.posts[i] = p; this.save(); this.emit({ type: 'post.updated', post: structuredClone(p) }); }
+    else this.add(p);
+    return ok(structuredClone(p));
+  }
+  /** R6 P2P: the friend deleted their post. */
+  async removeRemote(id: string) {
+    const i = this.posts.findIndex((x) => x.id === id); if (i < 0) return;
+    const [p] = this.posts.splice(i, 1);
+    if (p.kind === 'photo') await this.photos.delete(p.photoId);
+    this.save(); this.emit({ type: 'post.deleted', id });
+  }
   /** Who reacted / commented already (the simulator never repeats itself). */
   reactedBy(postId: string, who: string) { return !!this.posts.find((x) => x.id === postId)?.reactions[who]; }
   commentsBy(postId: string, who: string) { return this.posts.find((x) => x.id === postId)?.comments.filter((c) => c.authorId === who).length ?? 0; }

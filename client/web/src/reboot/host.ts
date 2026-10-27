@@ -83,6 +83,19 @@ export interface RebootHost {
   setRenderQuality(q: 'high' | 'balanced' | 'low'): void;
   /** The user's display name (the Mii nickname of the save, max 10). false = refused (empty). */
   setPlayerName(name: string): boolean;
+  /** Desktop app: the real friends connected peer-to-peer (null = not the desktop app, or P2P not running). */
+  p2p(): RebootP2P | null;
+}
+/** Peer-to-peer link to real friends (desktop app). Only authenticated friends' data arrives here. */
+export interface RebootP2P {
+  /** My id as my friends know me (p2p-…). */
+  me(): string | null;
+  /** Friends connected right now. */
+  online(): string[];
+  send(ch: string, data: unknown, to?: string): void;
+  on(ch: string, cb: (from: string, data: unknown) => void): () => void;
+  /** A friend came online. */
+  onOnline(cb: (id: string) => void): () => void;
 }
 
 export interface MiiView {

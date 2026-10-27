@@ -328,8 +328,12 @@ for (const [q, want] of [['reboot=0', false], ['reboot=1', true]]) {
   const c = await browser.newContext({ viewport: { width: 1200, height: 800 } }); const p = await c.newPage();
   await p.goto(`http://127.0.0.1:${port}/?${q}`); await p.waitForTimeout(2500);
   const r = await p.evaluate(() => ({ chunks: performance.getEntriesByType('resource').map((e) => e.name).filter((n) => /assets\/.*\.js/.test(n)), r5: !!document.querySelector('.r5-layer'), dock: !!document.querySelector('.mp-dock'), on: window.__mtw?.REBOOT_ON }));
-  if (!want) expect('J Classic ?reboot=0: no MiiPhone, no R5 layer, only the main chunk downloaded', !r.r5 && !r.dock && r.on === false && r.chunks.length === 1, r);
-  else expect('J control ?reboot=1: the Reboot chunk is downloaded and the R5 layer exists', r.r5 && r.dock && r.on === true && r.chunks.length === 2, r);
+  // the page's static chunks (index.html: the entry + its modulepreloads, e.g. code shared with the desktop P2P page)
+  const html = readFileSync(join(root, 'client', 'web', 'dist', 'index.html'), 'utf8');
+  const statics = [...html.matchAll(/(?:src|href)="\.\/(assets\/[^"]+\.js)"/g)].map((m) => m[1]);
+  const extra = r.chunks.filter((c) => !statics.some((s) => c.endsWith(s)));
+  if (!want) expect('J Classic ?reboot=0: no MiiPhone, no R5 layer, only the page\'s static chunks downloaded (no Reboot code)', !r.r5 && !r.dock && r.on === false && extra.length === 0, { ...r, statics, extra });
+  else expect('J control ?reboot=1: exactly one more chunk (Reboot) is downloaded and the R5 layer exists', r.r5 && r.dock && r.on === true && extra.length === 1, { ...r, statics, extra });
   await c.close();
 }
 await browser.close(); server.close();

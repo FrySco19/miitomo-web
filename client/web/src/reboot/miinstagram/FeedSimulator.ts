@@ -42,6 +42,9 @@ export interface SimConfig {
 }
 export const DEFAULT_SIM: SimConfig = { postCooldown: 180, pairCooldown: 900, maxPostsPerHour: 6, maxSimCommentsPerPost: 3, meetChance: 0.25, gameChance: 0.6, visitChance: 0.5, maxQueue: 60 };
 
+/** A friend connected peer-to-peer (desktop app): a real person, never simulated. */
+export const isRealPerson = (id: string) => id.startsWith('p2p-');
+
 export class FeedSimulator {
   now = 0;
   private queue: { at: number; fn: () => void }[] = [];
@@ -62,7 +65,8 @@ export class FeedSimulator {
     this.unsubs.push(svc.subscribe((e) => this.onFeed(e)));
     void this.refresh();
   }
-  async refresh() { try { this.friends = await this.opts.friends(); } catch { this.friends = []; } }
+  /** Real friends connected peer-to-peer (id p2p-…) are people: the simulator never acts, posts or comments as them. */
+  async refresh() { try { this.friends = (await this.opts.friends()).filter((f) => !isRealPerson(f.id)); } catch { this.friends = []; } }
   dispose() { for (const u of this.unsubs) u(); this.unsubs = []; this.queue = []; }
   get pending() { return this.queue.length; }
   private get user() { return this.opts.user ?? 'host'; }
@@ -140,7 +144,7 @@ export class FeedSimulator {
     for (const p of result.players) for (const q of result.players) if (p.id < q.id) this.opts.relations.bump(p.id, q.id, 'game');
     if (this.rnd() > this.config.gameChance) return;
     const w = result.winners[0]; if (!w) return;
-    if (w !== this.user) { const s = result.players.find((p) => p.id === w)!; void this.post(w, 'game', 'act.game.win', { game: gameTitle, score: s.score }, result.players.map((p) => p.id), `game:${result.sessionId}`); return; }
+    if (w !== this.user) { if (!this.friends.some((f) => f.id === w)) return; const s = result.players.find((p) => p.id === w)!; void this.post(w, 'game', 'act.game.win', { game: gameTitle, score: s.score }, result.players.map((p) => p.id), `game:${result.sessionId}`); return; }
     const loser = result.players.find((p) => p.id !== this.user && this.friends.some((f) => f.id === p.id));
     if (loser) void this.post(loser.id, 'game', 'act.game.lost', { game: gameTitle, winner: result.players.find((p) => p.id === w)?.name ?? '' }, result.players.map((p) => p.id), `game:${result.sessionId}`);
   }

@@ -29,6 +29,7 @@ import { LazyPhotoStore } from './miinstagram/PhotoStore';
 import { Relations } from './miinstagram/relations';
 import { FeedSimulator } from './miinstagram/FeedSimulator';
 import { MIInstagramApp, MIINSTAGRAM_ICON } from './miinstagram/MIInstagramApp';
+import { P2PFeedSync } from './miinstagram/P2PFeedSync';
 import { SettingsStore } from './settings/Settings';
 import { settingsApp } from './settings/SettingsApp';
 import { profileApp } from './people/ProfileApp';
@@ -138,6 +139,10 @@ export function bootReboot(host: RebootHost, opts: { serverUrl?: string | null; 
   const feed = wantFeed ? new LocalSocialService(new LazyPhotoStore(), kv) : null;
   const feedSim = feed ? new FeedSimulator(feed, { friends, relations, onTick: (cb) => host.onTick(cb), seed: opts.seed, userName: () => host.profile().name }) : null;
   const unsubs: (() => void)[] = [];
+  // desktop app: MIInstagram with the REAL friends connected peer-to-peer (their posts, our reactions and comments)
+  const p2p = host.p2p();
+  const feedSync = feed && p2p ? new P2PFeedSync(feed, p2p) : null;
+  if (feedSync) unsubs.push(() => feedSync.dispose());
   if (feedSim && social) unsubs.push(social.subscribe((e) => { if (e.type === 'convo.end' && e.why === 'done') feedSim.conversation(e.a, e.b, e.lines); }));
   if (feedSim && games) unsubs.push(games.subscribe((e) => { if (e.type === 'session' && e.e.type === 'finished') feedSim.game(e.e.result, '@' + e.session.def.titleKey); }));
   if (visit) unsubs.push(visit.subscribe((e) => {
@@ -184,6 +189,7 @@ export function bootReboot(host: RebootHost, opts: { serverUrl?: string | null; 
     id: 'friends', titleKey: 'app.friends', icon: APP_ICONS.friends, color: 'var(--r-green)', implemented: true,
     mount: friendsApp({
       i18n, me: 'host', friends, closeness: relationsOf,
+      online: p2p ? () => p2p.online() : null,
       places: places && visit ? { whereIs: (id) => places.whereIs(id), refusalOf: (id) => places.refusalOf(id), current: () => places.current, subscribe: (cb) => places.subscribe(() => cb()) } : null,
       go: async (placeId) => {
         const r = await move(placeId === GAMES_ID ? 'games' : 'friends', placeId === GAMES_ID ? undefined : placeId);
