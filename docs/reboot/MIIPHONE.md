@@ -39,7 +39,7 @@ animation (`settle`); a time-out does it anyway if no animation runs.
 
 ## Apps
 
-The home screen shows **implemented apps only**. R5 ships one: MIInstagram (see MIINSTAGRAM.md). Future apps can be
+The home screen shows **implemented apps only**. R5 shipped one: MIInstagram (see MIINSTAGRAM.md). R6 makes the phone the hub of Reboot: My page, Friends, MIInstagram, the shortcuts Plaza / Home / Rooms / Games (an `AppDefinition` with `action` instead of `mount`: a real move through the Piazza, then the phone closes; a refusal keeps it open with the reason), Shop and Settings (see R6.md). Future apps can be
 registered as `implemented: false`: they are never shown and never opened. An app is mounted into the phone screen
 and unmounted when it leaves it, taking its listeners with it.
 

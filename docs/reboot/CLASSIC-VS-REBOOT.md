@@ -53,6 +53,8 @@ Every feature belongs to exactly one of these classes:
 | MIInstagram feed, typed posts, reactions, comments, autonomous Miis (R5) | REBOOT, SERVER REQUIRED for other users | `reboot/miinstagram/`. Reactions, comment lines and moments are NEW text |
 | English + Italiano for Reboot (R5) | REBOOT | `reboot/i18n/`. Classic keeps the original texts of the user's files |
 | Guest placed inside without the door, `visitPlace`, object policy, room snapshot, Miifoto share hook (R5) | SHARED INFRASTRUCTURE | Off in Classic (never called / null) |
+| Design system, Settings, My page, Friends, MiiPhone shortcuts (R6.0a) | REBOOT | `reboot/ui/`, `reboot/settings/`, `reboot/people/`. Volumes / quality / player name reach the engine through `RebootHost` (Classic never calls them) |
+| Coins and the Reboot shop (R6.0b) | REBOOT (new economy, no real money) | `reboot/economy/`, `reboot/shop/`. The Classic shop stays a catalogue: Miitomo's prices were server data |
 | Minigames, MiniGameEngine (R6–R7) | REBOOT | Miitomo Drop 2.0 = new; original Miitomo Drop stays CLASSIC (prizes SERVER DATA MISSING) |
 | Events, rewards (R8) | REBOOT | No currency |
 | Notifications (R9) | REBOOT, SERVER REQUIRED for remote ones | |

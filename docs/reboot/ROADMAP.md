@@ -22,7 +22,7 @@ Every phase also keeps all Classic suites green.
 | R3 | Public Room vertical slice: PublicRoomTemplate, RoomInstance (presence, roles, permissions, capacity), LocalRoomService (server stand-in, realtime events), simulated visitors, owner panel | **done** (2026-10-26) |
 | R4 | Social hub "Piazza": model over R3 (location, destinations, navigation, errors, events) + view; Casa ↔ Hub ↔ my Public Room; future destinations declared | **done** (2026-10-26) |
 | R5 | Social expansion: friends' rooms, Sala Giochi (game model + Quiz dei Mii), MiiPhone + MIInstagram (typed posts, reactions, comments, autonomous Miis), Miifoto 2 sharing, English + Italiano | **done** (2026-10-27) |
-| R6 | World expansion (re-planned 2026-10-27, see [R6-AUDIT.md](R6-AUDIT.md)): R6.0 design system, Settings, MiiPhone hub, economy + shop · R6.1 house + editor · R6.2 places · R6.3 social 2.0 · R6.4 MIInstagram 2.0 · R6.5 new games. The old R6 (MiniGameEngine) is part of R6.5 | **in progress**: R6.0a block 1 done ([R6.md](R6.md)) |
+| R6 | World expansion (re-planned 2026-10-27, see [R6-AUDIT.md](R6-AUDIT.md)): R6.0 design system, Settings, MiiPhone hub, economy + shop · R6.1 house + editor · R6.2 places · R6.3 social 2.0 · R6.4 MIInstagram 2.0 · R6.5 new games. The old R6 (MiniGameEngine) is part of R6.5 | **in progress**: R6.0 done — R6.0a design system, Settings, MiiPhone hub (My page, Friends, shortcuts), translated panel and chat; R6.0b coins + Reboot shop ([R6.md](R6.md)). Next: R6.1 |
 | R7 | Events, progression, larger houses, more places and furniture, deeper relationships, seasons (the old R7 minigames moved into R6.5) | planned |
 | R8 | Events (data-driven) + rewards (RewardDefinition / Grant / Inventory, no currency yet) | planned |
 | R9 | Notifications | planned |
