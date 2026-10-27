@@ -111,8 +111,11 @@ try {
   await gA.waitForFunction(() => window.__mtw?.reboot?.feed);
   await gA.waitForFunction(() => window.__mtw.p2p.state?.friends.some((f) => f.online), null, { timeout: 10000 });
   await gA.evaluate(() => window.__mtw.reboot.feed.createAnswerPost('host', { question: { key: 'feed.tagline' }, answer: 'Ciao Bob, dal P2P!' }));
-  await gB.waitForFunction(() => window.__mtw.reboot.feed.feed({ limit: 30 }).then((r) => r.value.items.some((p) => p.answer === 'Ciao Bob, dal P2P!' && p.authorId.startsWith('p2p-'))), null, { timeout: 10000, polling: 300 });
-  expect('Reboot MIInstagram: Alice\'s post reaches Bob over P2P, as a post by Alice', true);
+  // 0.2: this check used waitForFunction with an async function, whose Promise counts as "true" at once — it never
+  // checked anything. Poll the real answer instead.
+  let arrived = false;
+  for (let i = 0; i < 40 && !arrived; i++) { arrived = await gB.evaluate(() => window.__mtw.reboot.feed.feed({ limit: 30 }).then((r) => r.value.items.some((p) => p.answer === 'Ciao Bob, dal P2P!' && p.authorId.startsWith('p2p-')))); if (!arrived) await gB.waitForTimeout(250); }
+  expect('Reboot MIInstagram: Alice\'s post reaches Bob over P2P, as a post by Alice', arrived);
   await gA.evaluate(() => window.mtwDesktop.game.open('launcher'));
   await gA.waitForSelector('.ln-card');
   expect('back to the launcher (menu Ctrl+L does the same)', true);

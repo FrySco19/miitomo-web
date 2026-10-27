@@ -27,11 +27,14 @@ jobs:
         run: npm run build
       - name: Unit tests (no game files needed)
         run: |
-          for t in bodyscale framing personality reboot social rooms hub i18n friendrooms gameroom miiphone miinstagram settings people economy p2p p2pfeed voice headattach shell; do
+          for t in bodyscale framing personality reboot social rooms hub i18n friendrooms gameroom miiphone miinstagram settings people economy p2p p2pfeed voice headattach shell session remoteavatar scenesync; do
             echo "::group::$t"
             npx --yes tsx@4.19.2 ../../tests/unit/$t.test.mts
             echo "::endgroup::"
           done
-      - name: Desktop app unit tests (accounts, user's files)
+      - name: Desktop app unit tests (accounts, user's files, LAN with two copies on one computer)
         working-directory: .
-        run: node tests/desktop/accounts.test.cjs
+        run: node tests/desktop/accounts.test.cjs && node tests/desktop/lan.test.cjs
+      - name: Presence / signaling server (real keys, real WebSocket clients)
+        working-directory: .
+        run: (cd server/signal && npm ci) && node tests/server/signal.test.mjs

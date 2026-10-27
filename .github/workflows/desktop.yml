@@ -7,6 +7,8 @@ on:
   workflow_dispatch:
   push:
     tags: ['desktop-v*']
+    # the desktop work branch: every push is tested on Linux AND Windows (real Electron, real WebRTC)
+    branches: ['claude/desktop-p2p']
 
 permissions:
   contents: read
@@ -21,18 +23,71 @@ jobs:
       - name: Build the web client
         working-directory: client/web
         run: npm ci && npm run build
+      - name: Unit tests (no game files needed)
+        working-directory: client/web
+        run: |
+          for t in bodyscale framing personality reboot social rooms hub i18n friendrooms gameroom miiphone miinstagram settings people economy p2p p2pfeed voice headattach shell session remoteavatar scenesync; do
+            echo "::group::$t"; npx --yes tsx@4.19.2 ../../tests/unit/$t.test.mts; echo "::endgroup::"
+          done
       - name: Install the desktop app
         working-directory: desktop
         run: npm ci
+      - name: Desktop unit tests (accounts, LAN two copies on one PC)
+        run: node tests/desktop/accounts.test.cjs && node tests/desktop/lan.test.cjs
       - name: Desktop end-to-end (two instances, accounts, launcher, P2P over LAN and invite codes)
         run: |
           npm i --no-save playwright@1.49.1
           xvfb-run -a node tests/desktop/desktop.e2e.mjs
       - name: Desktop audio end-to-end (synthetic sound files: discovery, tables, AudioContext, MP3 decode, fallback, effect, voice message, mute, page changes, reopen)
         run: xvfb-run -a node tests/desktop/audio.e2e.mjs
+      - name: Presence server deps (multiplayer test)
+        run: cd server/signal && npm ci
+      - name: Multiplayer end-to-end (two apps, presence server, shared room, restart, TURN)
+        run: xvfb-run -a node tests/desktop/multiplayer.e2e.mjs
+      - name: MIInstagram end-to-end (two accounts, both directions, pages closed, restart)
+        run: xvfb-run -a node tests/desktop/miinstagram.e2e.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: e2e-linux-screenshots
+          path: test-results/
+          if-no-files-found: ignore
+  # the same end-to-end tests on a real Windows machine (GitHub runner: Windows Server, no game files)
+  e2e-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
+      - name: Build the web client
+        working-directory: client/web
+        run: npm ci && npm run build
+      - name: Install the desktop app, the presence server and Playwright
+        shell: bash
+        run: |
+          (cd desktop && npm ci)
+          (cd server/signal && npm ci)
+          npm i --no-save playwright@1.49.1
+      - name: LAN (two copies on one PC) + presence server
+        shell: bash
+        run: node tests/desktop/lan.test.cjs && node tests/server/signal.test.mjs
+      - name: Desktop end-to-end (accounts, launcher, P2P over LAN and invite codes)
+        run: node tests/desktop/desktop.e2e.mjs
+      - name: Desktop audio end-to-end
+        run: node tests/desktop/audio.e2e.mjs
+      - name: Multiplayer end-to-end
+        run: node tests/desktop/multiplayer.e2e.mjs
+      - name: MIInstagram end-to-end
+        run: node tests/desktop/miinstagram.e2e.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: e2e-windows-screenshots
+          path: test-results/
+          if-no-files-found: ignore
   windows-exe:
     runs-on: windows-latest
-    needs: e2e-linux
+    needs: [e2e-linux, e2e-windows]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4

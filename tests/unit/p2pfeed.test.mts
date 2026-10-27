@@ -31,7 +31,8 @@ function link() {
 }
 const L = link();
 const A = new LocalSocialService(new MemoryPhotoStore(), kv()), B = new LocalSocialService(new MemoryPhotoStore(), kv());
-const sa = new P2PFeedSync(A, L.a), sb = new P2PFeedSync(B, L.b);
+const kvA = kv(), kvB = kv();
+let sa = new P2PFeedSync(A, L.a, kvA), sb = new P2PFeedSync(B, L.b, kvB);
 
 // a photo post
 const p = await A.createPhotoPost('host', { photo: PH, caption: 'Ciao da Alice', source: 'room' });
@@ -88,5 +89,37 @@ const all = (await B.feed({ limit: 30 })) as any;
 const fake = all.value.items.filter((x: any) => x.authorId === A_ID && !x.id.startsWith(A_ID + ':'));
 const fakeActs = all.value.items.flatMap((x: any) => [...Object.keys(x.reactions), ...x.comments.map((c: any) => c.authorId)]).filter((id: string) => id === A_ID);
 ok('simulator: no post, reaction or comment ever made in a real friend\'s name', !fake.length && !fakeActs.length, { fake, fakeActs });
+// ---- 0.2: what happens while the other player's Reboot page is CLOSED (v1 lost all of it)
+sb.dispose();                                                          // Bob goes to the launcher: no feed page listening
+const away = (await A.createPhotoPost('host', { photo: PH, caption: 'Mentre eri via', source: 'room' })) as any;
+await flush();
+ok('while Bob\'s page is closed, nothing reaches his feed (nobody listens)', !(await B.get(`${A_ID}:${away.value.id}`)).ok);
+sb = new P2PFeedSync(B, L.b, kvB); await flush(); await flush();       // Bob opens Reboot again: hello → Alice answers
+const gotAway = (await B.get(`${A_ID}:${away.value.id}`)) as any;
+ok('Bob\'s page opens: it asks Alice (hello) and gets the post made meanwhile, with its photo', gotAway.ok && (await B.photo(gotAway.value.photoId)) === PH, gotAway);
+sa.dispose();                                                          // now Alice is away
+await B.comment(`${A_ID}:${away.value.id}`, 'host', { text: 'Ti ho visto!' });
+await A.deletePost((caught.value.items.find((x: any) => x.answer === 'Pizza')?.id ?? '').split(':')[1] ?? '', 'host').catch(() => null);
+await flush();
+ok('Bob comments while Alice\'s page is closed: kept in Bob\'s outbox (not lost)', sb.pending === 1, sb.pending);
+sa = new P2PFeedSync(A, L.a, kvA); await flush(); await flush();
+const mineNow = (await A.get(away.value.id)) as any;
+ok('Alice\'s page opens: Bob\'s comment arrives (outbox resent, applied once, acknowledged)', mineNow.value.comments.filter((c: any) => c.authorId === B_ID && c.text === 'Ti ho visto!').length === 1 && sb.pending === 0, { c: mineNow.value.comments, pending: sb.pending });
+await flush();
+const bobCopy = (await B.get(`${A_ID}:${away.value.id}`)) as any;
+ok('… and Bob\'s copy shows his comment once (the author\'s update replaced the local one)', bobCopy.value.comments.filter((c: any) => c.text === 'Ti ho visto!').length === 1, bobCopy.value.comments);
+// a deletion while Bob's page is closed
+sb.dispose();
+await A.deletePost(away.value.id, 'host'); await flush();
+ok('deleted while Bob is away: still in Bob\'s copy for now', (await B.get(`${A_ID}:${away.value.id}`)).ok);
+sb = new P2PFeedSync(B, L.b, kvB); await flush(); await flush();
+ok('Bob\'s page opens: the post deleted meanwhile is gone (Alice\'s list of live posts)', !(await B.get(`${A_ID}:${away.value.id}`)).ok);
+// a repeated comment message (ack lost) is applied once
+const before2 = (await A.get(away.value.id)).ok;
+const myP = (await A.createAnswerPost('host', { question: { key: 'q.y' }, answer: 'Mare' })) as any; await flush();
+L.b.send(FEED_CH, { v: 2, op: 'comment', oid: 'same-oid', id: myP.value.id, text: 'Uno' });
+L.b.send(FEED_CH, { v: 2, op: 'comment', oid: 'same-oid', id: myP.value.id, text: 'Uno' });
+await flush();
+ok('the same comment sent twice (lost ack) is applied once', ((await A.get(myP.value.id)) as any).value.comments.filter((c: any) => c.text === 'Uno').length === 1 && !before2);
 sa.dispose(); sb.dispose(); sim.dispose();
 if (fails) { console.log(`${fails} FAILED`); process.exit(1); } else { console.log('ALL PASS'); process.exit(0); }

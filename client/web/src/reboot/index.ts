@@ -145,7 +145,7 @@ export function bootReboot(host: RebootHost, opts: { serverUrl?: string | null; 
   const unsubs: (() => void)[] = [];
   // desktop app: MIInstagram with the REAL friends connected peer-to-peer (their posts, our reactions and comments)
   const p2p = host.p2p();
-  const feedSync = feed && p2p ? new P2PFeedSync(feed, p2p) : null;
+  const feedSync = feed && p2p ? new P2PFeedSync(feed, p2p, kv) : null;
   if (feedSync) unsubs.push(() => feedSync.dispose());
   if (feedSim && social) unsubs.push(social.subscribe((e) => { if (e.type === 'convo.end' && e.why === 'done') feedSim.conversation(e.a, e.b, e.lines); }));
   if (feedSim && games) unsubs.push(games.subscribe((e) => { if (e.type === 'session' && e.e.type === 'finished') feedSim.game(e.e.result, '@' + e.session.def.titleKey); }));
