@@ -30,3 +30,9 @@ export const PUBLIC_TEMPLATES: readonly PublicRoomTemplate[] = [
   },
 ];
 export const templateById = (id: string | null | undefined) => PUBLIC_TEMPLATES.find((t) => t.id === id) ?? PUBLIC_TEMPLATES[0];
+
+/** R6: a room still called by its template's default title is shown with the template's translated name (`tpl.<id>`). */
+export function roomTitle(info: { title: string; templateId?: string | null }, i18n: { has(k: string): boolean; t(k: string): string }) {
+  const tpl = templateById(info.templateId);
+  return info.title === tpl.title && i18n.has(`tpl.${tpl.id}`) ? i18n.t(`tpl.${tpl.id}`) : info.title;
+}

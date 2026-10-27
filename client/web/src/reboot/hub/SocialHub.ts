@@ -20,6 +20,7 @@
  */
 import type { PublicRoomController, PublicMode } from '../rooms/PublicRoomController';
 import { I18n } from '../i18n/i18n';
+import { roomTitle } from '../rooms/templates';
 
 /** 'home' | 'hub' | 'public' | the id of a registered place (R5). */
 export type Location = string;
@@ -109,7 +110,7 @@ export class SocialHub {
     const room = r.room, info = room.info, present = room.presence().length, st = room.state;
     const t = this.i18n;
     const label = r.mode === 'closing' ? t.t('hub.public.closing') : st === 'closed' ? t.t('hub.public.closed') : st === 'full' ? t.t('hub.public.full') : t.t('hub.public.open', { n: present, cap: info.capacity });
-    return { mode: r.mode, state: st, present, capacity: info.capacity, visitors: room.visitors().length, title: info.title, label };
+    return { mode: r.mode, state: st, present, capacity: info.capacity, visitors: room.visitors().length, title: roomTitle(info, this.i18n), label };
   }
   destinations(): DestinationView[] {
     const at = this.at, ps = this.publicStatus, t = (k: string) => this.i18n.t(k);

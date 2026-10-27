@@ -53,7 +53,8 @@ export class HubScreen {
     if (b.dataset.panel && this.opts.panels?.[id]) { this.openPanel(id); return; }
     void this.hub.go(id);
   }
-  private openPanel(id: string) { this.closePanel(); this.panel = id; this.render(true); }
+  /** Opens a destination's panel (R6: also from the MiiPhone "Rooms" shortcut, once the user is in the Piazza). */
+  openPanel(id: string) { if (!this.opts.panels?.[id]) return false; this.closePanel(); this.panel = id; this.render(true); return true; }
   private closePanel() { if (this.unmountPanel) { try { this.unmountPanel(); } catch (err) { console.warn(err); } } this.unmountPanel = null; this.panel = null; }
   private syncVisible() { const v = this.visible(); this.pill.hidden = !v || this.hub.at === 'hub'; if (!v && this.hub.at !== 'hub') this.screen.hidden = true; }
   private busy(to: string) {
