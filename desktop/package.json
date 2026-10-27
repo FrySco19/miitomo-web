@@ -1,7 +1,7 @@
 {
   "name": "miitomo-desktop",
   "productName": "Miitomo Web",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Desktop app for Miitomo Web (Classic) and Miitomo Reboot: local accounts, launcher, peer-to-peer friends. Runs only on the user's own game files.",
   "main": "main.cjs",
   "license": "AGPL-3.0-only",

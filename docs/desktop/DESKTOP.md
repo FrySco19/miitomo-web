@@ -178,3 +178,19 @@ the APK and the CDN zips there is no original audio.
    - the head / joint Head ratio must say *proporzioni attese* (0.7–1.3).
 4. Take screenshots of the same Mii in the launcher, in Classic and in Reboot.
 5. Check mute and sound back, Classic → Reboot → launcher (Ctrl+L), then close and reopen the app.
+
+## Hotfix 0.1.2: closet / room thumbnails missing, bottom bar always Italian
+
+Reported after 0.1.1 ("works", but): every thumbnail of the Guardaroba and Arreda stanza menus was missing, and the
+bottom bar stayed in Italian with English chosen.
+
+| Problem | Cause (in code) | Fix |
+|---|---|---|
+| No thumbnails in Guardaroba / Arreda stanza / shop | `WANTED_SOURCE` (`client/web/src/assets/vfs.ts`): the rule for the dated weekly CDN zips (`20161110…webp.zip`, `…-message.zip`) had slipped into the comment of the line above, and `asset_capture2_item.zip` was never listed. The local import (desktop app, serve-local) reads only wanted sources, so the thumbnails were never imported. Picking the files by hand in the browser was not affected. | Rules restored. At the next start the game imports every zip of the folder that was never imported, so a 0.1.1 cache is completed by itself. Diagnostica shows `miniature` (found) and `miniature importate`. |
+| Bottom bar in Italian in English | The shared shell (`Play.ts`: bottom bar, friend-room bar, Menu) draws the original Italian texts (`tabBtn00/01`, `menuBtn01/04` msbt) and knew nothing of the Reboot language. | Reboot only: `RebootHost.setShellLabels` + `reboot/i18n/shell.ts`. English (and the other languages) use Reboot strings; Italian keeps the original texts; the labels on screen change at once. Classic (`?reboot=0`) is unchanged. |
+
+Tested (Linux, Xvfb): unit `shell.test.mts` (10, fails on the old filter); desktop E2E `audio.e2e.mjs` (+2: a fake dated
+zip in `local-assets/cdn` is imported with its thumbnails; a zip added between two starts is imported at the next start);
+`r5-ui.smoke.mjs` scenario K (real built app: bar + Menu switch EN ↔ IT at once; Classic stays Italian); all unit suites;
+desktop P2P E2E. Not verified: Windows, the real CDN zips (the fixture holds placeholder bytes, only their import is
+tested, not that the pictures draw).
